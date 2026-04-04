@@ -1,4 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { fetchCurrentUser, logout, type AuthUser } from "@/lib/auth-service";
 
 const enrolledCourses = [
   {
@@ -34,6 +39,54 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadMe() {
+      const response = await fetchCurrentUser();
+      if (!active) return;
+
+      if (!response.ok) {
+        router.push("/login");
+        return;
+      }
+
+      setCurrentUser(response.data ?? null);
+      setLoadingUser(false);
+    }
+
+    void loadMe();
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      router.push("/login");
+      router.refresh();
+      setIsLoggingOut(false);
+    }
+  }
+
+  if (loadingUser) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-6xl">
+          <p className="text-sm text-zinc-600">Loading your dashboard...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-6xl">
@@ -48,7 +101,20 @@ export default function DashboardPage() {
             <p className="mt-2 text-base leading-7 text-zinc-600">
               Track progress and jump into the next live class.
             </p>
+            {currentUser?.email ? (
+              <p className="mt-1 text-sm text-zinc-500">
+                Signed in as {currentUser.email}
+              </p>
+            ) : null}
           </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+          >
+            {isLoggingOut ? "Logging out..." : "Logout"}
+          </button>
         </header>
 
         <section className="mt-8">

@@ -1,7 +1,9 @@
-export type AuthStorageStrategy = "httpOnlyCookie" | "localStorage";
+import axios, { type AxiosError } from "axios";
+import api from "@/lib/api";
+import { bffUrl, backendRequest } from "@/lib/backend-api-client";
 
 export interface AuthUser {
-  id?: string;
+  id?: string | number;
   name?: string;
   email?: string;
 }
@@ -24,30 +26,9 @@ export interface AuthServiceResponse<T = AuthSuccessData> {
   error?: AuthErrorData;
 }
 
-interface AuthServiceOptions {
-  storage?: AuthStorageStrategy;
-  tokenKey?: string;
+/** Optional override for tests only (defaults to same-origin BFF). */
+interface AuthRequestOptions {
   baseUrl?: string;
-}
-
-const DEFAULT_TOKEN_KEY = "auth_token";
-
-function canUseLocalStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
-function buildUrl(path: string, baseUrl?: string) {
-  if (!baseUrl) return path;
-  const trimmedBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-  return `${trimmedBase}${path}`;
-}
-
-async function safeParseJson(response: Response): Promise<Record<string, unknown> | null> {
-  try {
-    return (await response.json()) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
 }
 
 function getErrorMessage(
@@ -58,52 +39,68 @@ function getErrorMessage(
   if (typeof message === "string" && message.trim()) {
     return message;
   }
+  const detail = payload?.detail;
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+  const title = payload?.title;
+  if (typeof title === "string" && title.trim()) {
+    return title;
+  }
+  const err = payload?.error;
+  if (typeof err === "string" && err.trim()) {
+    return err;
+  }
+  if (err && typeof err === "object" && "message" in err) {
+    const nested = (err as { message?: unknown }).message;
+    if (typeof nested === "string" && nested.trim()) {
+      return nested;
+    }
+  }
   return fallback;
 }
 
-async function authRequest<T>(
-  endpoint: "/api/auth/login" | "/api/auth/register",
-  payload: Record<string, string>,
-  options: AuthServiceOptions = {},
+function resolveBffUrl(segments: string[], baseUrl?: string): string {
+  if (!baseUrl) return bffUrl(...segments);
+  const trimmed = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  return `${trimmed}${bffUrl(...segments)}`;
+}
+
+async function jsonRequest<T>(
+  method: string,
+  segments: string[],
+  jsonBody: Record<string, unknown> | undefined,
+  options: AuthRequestOptions = {},
 ): Promise<AuthServiceResponse<T>> {
-  const storage = options.storage ?? "httpOnlyCookie";
-  const tokenKey = options.tokenKey ?? DEFAULT_TOKEN_KEY;
-
+  const url = resolveBffUrl(segments, options.baseUrl);
   try {
-    const response = await fetch(buildUrl(endpoint, options.baseUrl), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
+    const response = await api.request<T>({
+      method,
+      url,
+      data: jsonBody,
+      headers: { Accept: "application/json" },
     });
-
-    const body = await safeParseJson(response);
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        status: response.status,
-        error: {
-          message: getErrorMessage(body, "Request failed. Please try again."),
-          details: body ?? undefined,
-        },
-      };
-    }
-
-    // If using localStorage, save token from response payload.
-    if (storage === "localStorage" && canUseLocalStorage()) {
-      const token = body?.token;
-      if (typeof token === "string" && token) {
-        window.localStorage.setItem(tokenKey, token);
-      }
-    }
 
     return {
       ok: true,
       status: response.status,
-      data: (body ?? {}) as T,
+      data: response.data,
     };
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<Record<string, unknown>>;
+      const status = axiosError.response?.status ?? 0;
+      const payload = axiosError.response?.data ?? null;
+      return {
+        ok: false,
+        status,
+        error: {
+          message: getErrorMessage(payload, "Request failed. Please try again."),
+          details: payload ?? axiosError.message,
+        },
+      };
+    }
+
     return {
       ok: false,
       status: 0,
@@ -115,29 +112,30 @@ async function authRequest<T>(
   }
 }
 
+/** POST /api/Auth/login — session cookie is set by ASP.NET (via BFF). */
 export async function login(
   email: string,
   password: string,
-  options: AuthServiceOptions = {},
+  options: AuthRequestOptions = {},
 ): Promise<AuthServiceResponse<AuthSuccessData>> {
-  return authRequest<AuthSuccessData>(
-    "/api/auth/login",
-    {
-      email: email.trim(),
-      password,
-    },
+  return jsonRequest<AuthSuccessData>(
+    "POST",
+    ["Auth", "login"],
+    { email: email.trim(), password },
     options,
   );
 }
 
+/** POST /api/Auth/register */
 export async function register(
   name: string,
   email: string,
   password: string,
-  options: AuthServiceOptions = {},
+  options: AuthRequestOptions = {},
 ): Promise<AuthServiceResponse<AuthSuccessData>> {
-  return authRequest<AuthSuccessData>(
-    "/api/auth/register",
+  return jsonRequest<AuthSuccessData>(
+    "POST",
+    ["Auth", "register"],
     {
       name: name.trim(),
       email: email.trim(),
@@ -147,13 +145,23 @@ export async function register(
   );
 }
 
-export function getStoredToken(tokenKey = DEFAULT_TOKEN_KEY): string | null {
-  if (!canUseLocalStorage()) return null;
-  return window.localStorage.getItem(tokenKey);
+/** POST /api/Auth/logout — clears auth cookie on the server. */
+export async function logout(
+  options: AuthRequestOptions = {},
+): Promise<AuthServiceResponse<{ message?: string }>> {
+  return jsonRequest<{ message?: string }>(
+    "POST",
+    ["Auth", "logout"],
+    undefined,
+    options,
+  );
 }
 
-export function clearStoredToken(tokenKey = DEFAULT_TOKEN_KEY): void {
-  if (!canUseLocalStorage()) return;
-  window.localStorage.removeItem(tokenKey);
+/** GET /api/Auth/me — requires session cookie. */
+export async function fetchCurrentUser(
+  options: AuthRequestOptions = {},
+): Promise<AuthServiceResponse<AuthUser>> {
+  return jsonRequest<AuthUser>("GET", ["Auth", "me"], undefined, options);
 }
 
+export { backendRequest, bffUrl };

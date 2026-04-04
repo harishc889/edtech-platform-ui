@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { register } from "@/lib/auth-service";
 
 function isValidEmail(email: string) {
   // Simple, pragmatic email check for UI validation.
@@ -9,6 +11,7 @@ function isValidEmail(email: string) {
 }
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +25,7 @@ export default function RegisterPage() {
   }>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   function validate() {
     const nextErrors: typeof fieldErrors = {};
@@ -46,19 +49,23 @@ export default function RegisterPage() {
 
   async function handleRegister(e: FormEvent) {
     e.preventDefault();
-    setSuccessMessage(null);
+    setFormError(null);
 
     if (!validate()) return;
 
     setIsSubmitting(true);
     try {
-      // Demo UI only: simulate registration.
-      await new Promise((r) => setTimeout(r, 800));
-      setSuccessMessage("Registration successful! You can now log in.");
-      setName("");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
+      const response = await register(name, email, password);
+
+      if (!response.ok) {
+        setFormError(
+          response.error?.message ?? "Registration failed. Please try again.",
+        );
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
     } finally {
       setIsSubmitting(false);
     }
@@ -112,6 +119,7 @@ export default function RegisterPage() {
                   onChange={(e) => {
                     setName(e.target.value);
                     setFieldErrors((prev) => ({ ...prev, name: undefined }));
+                    setFormError(null);
                   }}
                   autoComplete="name"
                 />
@@ -129,6 +137,7 @@ export default function RegisterPage() {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    setFormError(null);
                   }}
                   autoComplete="email"
                   inputMode="email"
@@ -148,6 +157,7 @@ export default function RegisterPage() {
                   onChange={(e) => {
                     setPassword(e.target.value);
                     setFieldErrors((prev) => ({ ...prev, password: undefined, confirmPassword: undefined }));
+                    setFormError(null);
                   }}
                   autoComplete="new-password"
                 />
@@ -168,6 +178,7 @@ export default function RegisterPage() {
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
                     setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                    setFormError(null);
                   }}
                   autoComplete="new-password"
                 />
@@ -176,9 +187,9 @@ export default function RegisterPage() {
                 ) : null}
               </label>
 
-              {successMessage ? (
-                <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-                  {successMessage}
+              {formError ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {formError}
                 </p>
               ) : null}
 
