@@ -38,9 +38,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setFormError(null);
     try {
-      const response = await login(email, password, {
-        storage: "httpOnlyCookie",
-      });
+      const response = await login(email, password);
 
       if (!response.ok) {
         setFormError(response.error?.message ?? "Invalid email or password.");
