@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { login } from "@/lib/auth-service";
+import {
+  PasswordFieldWithToggle,
+  authInputClass,
+  authLabelClass,
+  authPrimaryButtonClass,
+} from "@/app/components/password-field-with-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,6 +51,7 @@ export default function LoginPage() {
         return;
       }
 
+      window.dispatchEvent(new Event("auth:changed"));
       router.push("/dashboard");
       router.refresh();
     } finally {
@@ -53,25 +60,27 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
-        <section className="hidden lg:block">
-          <div className="rounded-3xl bg-white/60 p-10 shadow-lg ring-1 ring-zinc-200 backdrop-blur">
-            <p className="inline-flex rounded-full bg-indigo-100 px-4 py-1 text-sm font-semibold text-indigo-700">
+    <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-stretch gap-10 lg:grid-cols-2 lg:gap-16">
+        <section className="hidden lg:flex">
+          <div className="relative flex w-full flex-col justify-center overflow-hidden rounded-3xl border border-slate-700/80 bg-mesh-dark p-12 text-white shadow-2xl">
+            <div
+              className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-cyan-500/20 blur-3xl"
+              aria-hidden
+            />
+            <p className="relative inline-flex w-fit rounded-full border border-cyan-400/40 bg-cyan-950/50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-50">
               Welcome back
             </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight text-zinc-900">
+            <h1 className="font-display relative mt-6 text-4xl font-extrabold leading-tight tracking-tight text-white">
               Sign in to your learning dashboard
             </h1>
-            <p className="mt-4 text-base leading-7 text-zinc-600">
+            <p className="relative mt-4 max-w-md text-base leading-relaxed text-slate-200">
               Track progress, join live classes, and keep your learning streak
               going.
             </p>
-            <div className="mt-6 rounded-2xl bg-white p-6 ring-1 ring-zinc-200">
-              <p className="text-sm font-semibold text-zinc-900">
-                Secure authentication
-              </p>
-              <p className="mt-2 text-sm text-zinc-600">
+            <div className="relative mt-10 rounded-2xl border border-white/20 bg-slate-900/40 p-6 backdrop-blur-sm">
+              <p className="text-sm font-bold text-white">Secure authentication</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-200">
                 We keep your session active and protect your account with secure
                 token handling.
               </p>
@@ -79,25 +88,25 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-md">
-          <div className="rounded-3xl bg-white/90 p-7 shadow-lg ring-1 ring-zinc-200 backdrop-blur">
-            <div className="text-center">
-              <p className="inline-flex rounded-full bg-indigo-100 px-4 py-1 text-sm font-semibold text-indigo-700">
+        <section className="mx-auto flex w-full max-w-md items-center lg:max-w-none lg:py-4">
+          <div className="w-full rounded-3xl border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-200/50 sm:p-10">
+            <div className="text-center lg:text-left">
+              <p className="inline-flex rounded-full bg-cyan-50 px-4 py-1 text-xs font-bold uppercase tracking-wide text-cyan-800">
                 Secure login
               </p>
-              <h2 className="mt-4 text-2xl font-bold tracking-tight text-zinc-900">
+              <h2 className="font-display mt-4 text-3xl font-bold tracking-tight text-slate-900">
                 Login
               </h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-600">
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 Use your email and password to continue.
               </p>
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={handleLogin}>
+            <form className="mt-8 space-y-5" onSubmit={handleLogin}>
               <label className="block">
-                <span className="text-sm font-medium text-zinc-900">Email</span>
+                <span className={authLabelClass}>Email</span>
                 <input
-                  className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  className={authInputClass}
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => {
@@ -113,39 +122,23 @@ export default function LoginPage() {
                 ) : null}
               </label>
 
-              <label className="block">
-                <span className="text-sm font-medium text-zinc-900">
-                  Password
-                </span>
-                <div className="mt-2 flex items-stretch gap-2">
-                  <input
-                    className="block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                    placeholder="Your password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setPasswordError(null);
-                      setFormError(null);
-                    }}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="shrink-0 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    aria-pressed={showPassword}
-                  >
-                    {showPassword ? "Hide" : "Show"}
-                  </button>
-                </div>
-                {passwordError ? (
-                  <p className="mt-2 text-sm text-red-600">{passwordError}</p>
-                ) : null}
-              </label>
+              <PasswordFieldWithToggle
+                label="Password"
+                placeholder="Your password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError(null);
+                  setFormError(null);
+                }}
+                visible={showPassword}
+                onToggleVisible={() => setShowPassword((v) => !v)}
+                error={passwordError}
+              />
 
               {formError ? (
-                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                   {formError}
                 </p>
               ) : null}
@@ -153,26 +146,26 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                className={authPrimaryButtonClass}
               >
                 {isSubmitting ? "Logging in..." : "Login"}
               </button>
 
-              <p className="text-center text-sm text-zinc-600">
+              <p className="text-center text-sm text-slate-600">
                 Don&apos;t have an account?{" "}
                 <Link
                   href="/register"
-                  className="font-semibold text-indigo-700 hover:text-indigo-600"
+                  className="font-bold text-cyan-700 hover:text-cyan-600"
                 >
                   Register
                 </Link>
               </p>
 
-              <p className="text-center text-xs leading-5 text-zinc-500">
+              <p className="text-center text-xs leading-5 text-slate-500">
                 Prefer OTP?{" "}
                 <Link
                   href="/login/otp"
-                  className="font-semibold text-indigo-700 hover:text-indigo-600"
+                  className="font-bold text-cyan-700 hover:text-cyan-600"
                 >
                   Sign in with OTP
                 </Link>
@@ -185,4 +178,3 @@ export default function LoginPage() {
     </main>
   );
 }
-

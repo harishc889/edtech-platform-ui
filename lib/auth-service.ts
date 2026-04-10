@@ -1,5 +1,6 @@
 import axios, { type AxiosError } from "axios";
 import api from "@/lib/api";
+import { getErrorMessageFromPayload } from "@/lib/api-error";
 import { bffUrl, backendRequest } from "@/lib/backend-api-client";
 
 export interface AuthUser {
@@ -29,35 +30,6 @@ export interface AuthServiceResponse<T = AuthSuccessData> {
 /** Optional override for tests only (defaults to same-origin BFF). */
 interface AuthRequestOptions {
   baseUrl?: string;
-}
-
-function getErrorMessage(
-  payload: Record<string, unknown> | null,
-  fallback: string,
-): string {
-  const message = payload?.message;
-  if (typeof message === "string" && message.trim()) {
-    return message;
-  }
-  const detail = payload?.detail;
-  if (typeof detail === "string" && detail.trim()) {
-    return detail;
-  }
-  const title = payload?.title;
-  if (typeof title === "string" && title.trim()) {
-    return title;
-  }
-  const err = payload?.error;
-  if (typeof err === "string" && err.trim()) {
-    return err;
-  }
-  if (err && typeof err === "object" && "message" in err) {
-    const nested = (err as { message?: unknown }).message;
-    if (typeof nested === "string" && nested.trim()) {
-      return nested;
-    }
-  }
-  return fallback;
 }
 
 function resolveBffUrl(segments: string[], baseUrl?: string): string {
@@ -95,7 +67,10 @@ async function jsonRequest<T>(
         ok: false,
         status,
         error: {
-          message: getErrorMessage(payload, "Request failed. Please try again."),
+          message: getErrorMessageFromPayload(
+            payload,
+            "Request failed. Please try again.",
+          ),
           details: payload ?? axiosError.message,
         },
       };
@@ -157,7 +132,10 @@ export async function logout(
   );
 }
 
-/** GET /api/Auth/me — requires session cookie. */
+/**
+ * GET /api/Auth/me — session cookie.
+ * For the dashboard, include this user’s enrollments on the same payload (e.g. `enrollments`, `courses`, or nested `user.enrollments`) so the UI does not need a second request.
+ */
 export async function fetchCurrentUser(
   options: AuthRequestOptions = {},
 ): Promise<AuthServiceResponse<AuthUser>> {

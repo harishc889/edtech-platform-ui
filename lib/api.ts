@@ -12,5 +12,14 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const method = (config.method ?? "get").toLowerCase();
+  if (method === "get" || method === "head") {
+    config.headers.set("Cache-Control", "no-store");
+    config.headers.set("Pragma", "no-cache");
+  }
+  return config;
+});
+
 export default api;
 

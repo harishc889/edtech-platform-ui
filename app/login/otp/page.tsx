@@ -34,7 +34,6 @@ export default function OtpLoginPage() {
 
     setIsSending(true);
     try {
-      // Demo UI only: we "send" an OTP and display a hint.
       await new Promise((r) => setTimeout(r, 700));
       setOtpSent(true);
       setOtp("");
@@ -59,7 +58,6 @@ export default function OtpLoginPage() {
 
     setIsVerifying(true);
     try {
-      // Demo UI only: verify OTP on the client.
       await new Promise((r) => setTimeout(r, 700));
       if (otp === expectedOtp) {
         setStatus("Verification successful. Welcome!");
@@ -71,29 +69,32 @@ export default function OtpLoginPage() {
     }
   }
 
+  const inputClass =
+    "mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/15";
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white px-4 py-10 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-20 lg:px-8">
       <div className="mx-auto w-full max-w-md">
-        <div className="rounded-3xl bg-white/90 p-7 shadow-lg ring-1 ring-zinc-200 backdrop-blur">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-200/50 sm:p-10">
           <div className="text-center">
-            <p className="inline-flex rounded-full bg-indigo-100 px-4 py-1 text-sm font-semibold text-indigo-700">
+            <p className="inline-flex rounded-full bg-cyan-50 px-4 py-1 text-xs font-bold uppercase tracking-wide text-cyan-800">
               Sign in with OTP
             </p>
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-900">
+            <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-slate-900">
               Login
             </h1>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
               Enter your phone or email to receive a 6-digit OTP.
             </p>
           </div>
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-8 space-y-5">
             <label className="block">
-              <span className="text-sm font-medium text-zinc-900">
+              <span className="text-sm font-semibold text-slate-800">
                 Phone or email
               </span>
               <input
-                className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className={inputClass}
                 placeholder="name@example.com or +1 555 123 4567"
                 value={identifier}
                 onChange={(e) => handleIdentifierChange(e.target.value)}
@@ -106,19 +107,19 @@ export default function OtpLoginPage() {
               type="button"
               onClick={handleSendOtp}
               disabled={isSending || !identifier.trim()}
-              className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              className="flex w-full items-center justify-center rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-4 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSending ? "Sending..." : "Send OTP"}
             </button>
 
             <div className="pt-2">
               <label className="block">
-                <span className="text-sm font-medium text-zinc-900">
+                <span className="text-sm font-semibold text-slate-800">
                   OTP (6 digits)
                 </span>
                 <input
-                  className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center text-lg tracking-widest text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                  placeholder="123456"
+                  className={`${inputClass} text-center text-lg tracking-[0.35em] disabled:cursor-not-allowed disabled:opacity-60`}
+                  placeholder="••••••"
                   value={otp}
                   onChange={(e) => {
                     const onlyNumbers = e.target.value.replace(/\D/g, "");
@@ -136,7 +137,7 @@ export default function OtpLoginPage() {
                 type="button"
                 onClick={handleVerify}
                 disabled={!otpSent || isVerifying || !otpIsValid}
-                className="mt-4 flex w-full items-center justify-center rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+                className="mt-4 flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-4 text-sm font-bold text-white shadow-md transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isVerifying ? "Verifying..." : "Verify"}
               </button>
@@ -144,19 +145,19 @@ export default function OtpLoginPage() {
 
             {status ? (
               <p
-                className={`rounded-xl border px-4 py-3 text-sm ${
+                className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
                   status.startsWith("Verification successful")
                     ? "border-green-200 bg-green-50 text-green-800"
                     : status.includes("Demo OTP")
-                      ? "border-indigo-200 bg-indigo-50 text-indigo-800"
-                      : "border-zinc-200 bg-zinc-50 text-zinc-800"
+                      ? "border-cyan-200 bg-cyan-50 text-cyan-900"
+                      : "border-slate-200 bg-slate-50 text-slate-800"
                 }`}
               >
                 {status}
               </p>
             ) : null}
 
-            <p className="text-center text-xs leading-5 text-zinc-500">
+            <p className="text-center text-xs leading-5 text-slate-500">
               By continuing, you agree to our Terms and Privacy Policy.
             </p>
           </div>
@@ -165,4 +166,3 @@ export default function OtpLoginPage() {
     </main>
   );
 }
-
