@@ -3,6 +3,16 @@ import { getBackendApiPrefix, getBackendOrigin } from "@/lib/backend-env";
 
 const SEGMENT_RE = /^[a-zA-Z0-9._~-]+$/;
 
+/** Per-user API data must not be cached by browsers or shared CDNs. */
+function applyNoStore(res: NextResponse) {
+  res.headers.set(
+    "Cache-Control",
+    "private, no-store, max-age=0, must-revalidate",
+  );
+  res.headers.set("Pragma", "no-cache");
+  return res;
+}
+
 function forwardSetCookies(from: Response, to: NextResponse) {
   const headers = from.headers as Headers & { getSetCookie?: () => string[] };
   if (typeof headers.getSetCookie === "function") {
@@ -13,6 +23,44 @@ function forwardSetCookies(from: Response, to: NextResponse) {
   }
   const single = from.headers.get("set-cookie");
   if (single) to.headers.append("Set-Cookie", single);
+}
+
+function applyLogoutCookieCleanup(pathSegments: string[], res: NextResponse) {
+  if (pathSegments.length < 2) return;
+  const [controller, action] = pathSegments;
+  if (controller.toLowerCase() !== "auth" || action.toLowerCase() !== "logout") {
+    return;
+  }
+
+  const cookieNames = [
+    process.env.AUTH_COOKIE_NAME || "auth_token",
+    "auth_token",
+    "token",
+    "access_token",
+    "refresh_token",
+    "jwt",
+    ".AspNetCore.Cookies",
+    "AspNetCore.Cookies",
+    ".AspNetCore.Identity.Application",
+    "Identity.Application",
+  ];
+  for (const name of cookieNames) {
+    res.cookies.set({
+      name,
+      value: "",
+      maxAge: 0,
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+  }
+}
+
+function isLogoutRoute(pathSegments: string[]): boolean {
+  if (pathSegments.length < 2) return false;
+  const [controller, action] = pathSegments;
+  return controller.toLowerCase() === "auth" && action.toLowerCase() === "logout";
 }
 
 function validateSegments(segments: string[]): string | null {
@@ -37,17 +85,19 @@ export async function proxyToAspNetBackend(
 ): Promise<NextResponse> {
   const bad = validateSegments(pathSegments);
   if (bad) {
-    return NextResponse.json({ message: bad }, { status: 400 });
+    return applyNoStore(NextResponse.json({ message: bad }, { status: 400 }));
   }
 
   const origin = getBackendOrigin();
   if (!origin) {
-    return NextResponse.json(
-      {
-        message:
-          "API_BASE_URL is not set. Add it to .env.local (e.g. https://localhost:7148).",
-      },
-      { status: 500 },
+    return applyNoStore(
+      NextResponse.json(
+        {
+          message:
+            "API_BASE_URL is not set. Add it to .env.local (e.g. https://localhost:7148).",
+        },
+        { status: 500 },
+      ),
     );
   }
 
@@ -112,7 +162,8 @@ export async function proxyToAspNetBackend(
       const data = await backendRes.json().catch(() => ({}));
       const res = NextResponse.json(data, { status: backendRes.status });
       forwardSetCookies(backendRes, res);
-      return res;
+      applyLogoutCookieCleanup(pathSegments, res);
+      return applyNoStore(res);
     }
 
     const text = await backendRes.text().catch(() => "");
@@ -123,20 +174,35 @@ export async function proxyToAspNetBackend(
       },
     });
     forwardSetCookies(backendRes, res);
-    return res;
+    applyLogoutCookieCleanup(pathSegments, res);
+    return applyNoStore(res);
   } catch (error) {
+    if (isLogoutRoute(pathSegments)) {
+      const res = NextResponse.json(
+        {
+          message:
+            "Logged out locally. Backend logout endpoint was unavailable.",
+        },
+        { status: 200 },
+      );
+      applyLogoutCookieCleanup(pathSegments, res);
+      return applyNoStore(res);
+    }
+
     const isDev = process.env.NODE_ENV !== "production";
     const code =
       error && typeof error === "object" && "cause" in error
         ? ((error as { cause?: { code?: string } }).cause?.code ?? undefined)
         : undefined;
-    return NextResponse.json(
-      {
-        message: isDev
-          ? `Unable to reach the ASP.NET Core API. Check API_BASE_URL, API_ALLOW_SELF_SIGNED_TLS, and restart dev server.${code ? ` Error: ${code}` : ""}`
-          : "Unable to reach the ASP.NET Core API. Check API_BASE_URL and that the API is running.",
-      },
-      { status: 502 },
+    return applyNoStore(
+      NextResponse.json(
+        {
+          message: isDev
+            ? `Unable to reach the ASP.NET Core API. Check API_BASE_URL, API_ALLOW_SELF_SIGNED_TLS, and restart dev server.${code ? ` Error: ${code}` : ""}`
+            : "Unable to reach the ASP.NET Core API. Check API_BASE_URL and that the API is running.",
+        },
+        { status: 502 },
+      ),
     );
   }
 }

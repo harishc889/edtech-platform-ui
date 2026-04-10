@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 const DEFAULT_COOKIE_NAME = "auth_token";
-const PROTECTED_PREFIXES = ["/dashboard", "/courses", "/profile"];
+const PROTECTED_PREFIXES = ["/dashboard", "/profile"];
 
 export function proxy(request: NextRequest) {
   const cookieName = process.env.AUTH_COOKIE_NAME || DEFAULT_COOKIE_NAME;
@@ -23,6 +23,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/courses/:path*", "/profile/:path*"],
+  matcher: ["/dashboard/:path*", "/profile/:path*"],
 };
 

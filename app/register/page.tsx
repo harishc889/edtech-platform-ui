@@ -4,9 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { register } from "@/lib/auth-service";
+import {
+  PasswordFieldWithToggle,
+  authInputClass,
+  authLabelClass,
+  authPrimaryButtonClass,
+} from "@/app/components/password-field-with-toggle";
 
 function isValidEmail(email: string) {
-  // Simple, pragmatic email check for UI validation.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
@@ -16,6 +21,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
@@ -34,10 +41,12 @@ export default function RegisterPage() {
 
     if (!nextName) nextErrors.name = "Name is required.";
     if (!nextEmail) nextErrors.email = "Email is required.";
-    else if (!isValidEmail(nextEmail)) nextErrors.email = "Enter a valid email address.";
+    else if (!isValidEmail(nextEmail))
+      nextErrors.email = "Enter a valid email address.";
 
     if (!password) nextErrors.password = "Password is required.";
-    if (!confirmPassword) nextErrors.confirmPassword = "Please confirm your password.";
+    if (!confirmPassword)
+      nextErrors.confirmPassword = "Please confirm your password.";
 
     if (password && confirmPassword && password !== confirmPassword) {
       nextErrors.confirmPassword = "Passwords do not match.";
@@ -72,48 +81,63 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
-        <section className="hidden lg:block">
-          <div className="rounded-3xl bg-white/60 p-10 shadow-lg ring-1 ring-zinc-200 backdrop-blur">
-            <p className="inline-flex rounded-full bg-indigo-100 px-4 py-1 text-sm font-semibold text-indigo-700">
+    <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-stretch gap-10 lg:grid-cols-2 lg:gap-16">
+        <section className="hidden lg:flex">
+          <div className="relative flex w-full flex-col justify-center overflow-hidden rounded-3xl border border-slate-700/80 bg-mesh-dark p-12 text-white shadow-2xl">
+            <div
+              className="pointer-events-none absolute -left-16 bottom-0 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl"
+              aria-hidden
+            />
+            <p className="relative inline-flex w-fit rounded-full border border-cyan-400/40 bg-cyan-950/50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-50">
               Get started
             </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight text-zinc-900">
+            <h1 className="font-display relative mt-6 text-4xl font-extrabold leading-tight tracking-tight text-white">
               Create your account
             </h1>
-            <p className="mt-4 text-base leading-7 text-zinc-600">
-              Join live classes, track your progress, and learn practical skills that matter.
+            <p className="relative mt-4 max-w-md text-base leading-relaxed text-slate-200">
+              Join live classes, track your progress, and learn practical skills
+              that matter.
             </p>
 
-            <div className="mt-6 space-y-3 rounded-2xl bg-white p-6 ring-1 ring-zinc-200">
-              <div className="text-sm font-semibold text-zinc-900">What you get</div>
-              <div className="text-sm text-zinc-600">- Course progress tracking</div>
-              <div className="text-sm text-zinc-600">- Live class access</div>
-              <div className="text-sm text-zinc-600">- Personalized learning paths</div>
+            <div className="relative mt-10 space-y-4 rounded-2xl border border-white/20 bg-slate-900/40 p-6 backdrop-blur-sm">
+              <p className="text-sm font-bold text-white">What you get</p>
+              <ul className="space-y-2 text-sm text-slate-200">
+                <li className="flex gap-2">
+                  <span className="text-cyan-400">✓</span> Course progress
+                  tracking
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-cyan-400">✓</span> Live class access
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-cyan-400">✓</span> Personalized learning
+                  paths
+                </li>
+              </ul>
             </div>
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-md">
-          <div className="rounded-3xl bg-white/90 p-7 shadow-lg ring-1 ring-zinc-200 backdrop-blur">
-            <div className="text-center">
-              <p className="inline-flex rounded-full bg-indigo-100 px-4 py-1 text-sm font-semibold text-indigo-700">
+        <section className="mx-auto flex w-full max-w-md items-center lg:max-w-none lg:py-4">
+          <div className="w-full rounded-3xl border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-200/50 sm:p-10">
+            <div className="text-center lg:text-left">
+              <p className="inline-flex rounded-full bg-cyan-50 px-4 py-1 text-xs font-bold uppercase tracking-wide text-cyan-800">
                 Register
               </p>
-              <h2 className="mt-4 text-2xl font-bold tracking-tight text-zinc-900">
+              <h2 className="font-display mt-4 text-3xl font-bold tracking-tight text-slate-900">
                 Create an account
               </h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-600">
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 Fill in your details to get started.
               </p>
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={handleRegister}>
+            <form className="mt-8 space-y-5" onSubmit={handleRegister}>
               <label className="block">
-                <span className="text-sm font-medium text-zinc-900">Name</span>
+                <span className={authLabelClass}>Name</span>
                 <input
-                  className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  className={authInputClass}
                   placeholder="Your name"
                   value={name}
                   onChange={(e) => {
@@ -129,9 +153,11 @@ export default function RegisterPage() {
               </label>
 
               <label className="block">
-                <span className="text-sm font-medium text-zinc-900">Email</span>
+                <span className={authLabelClass}>
+                  Email
+                </span>
                 <input
-                  className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  className={authInputClass}
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => {
@@ -143,52 +169,53 @@ export default function RegisterPage() {
                   inputMode="email"
                 />
                 {fieldErrors.email ? (
-                  <p className="mt-2 text-sm text-red-600">{fieldErrors.email}</p>
+                  <p className="mt-2 text-sm text-red-600">
+                    {fieldErrors.email}
+                  </p>
                 ) : null}
               </label>
 
-              <label className="block">
-                <span className="text-sm font-medium text-zinc-900">Password</span>
-                <input
-                  className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="Create a password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setFieldErrors((prev) => ({ ...prev, password: undefined, confirmPassword: undefined }));
-                    setFormError(null);
-                  }}
-                  autoComplete="new-password"
-                />
-                {fieldErrors.password ? (
-                  <p className="mt-2 text-sm text-red-600">{fieldErrors.password}</p>
-                ) : null}
-              </label>
+              <PasswordFieldWithToggle
+                label="Password"
+                placeholder="Create a password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    password: undefined,
+                    confirmPassword: undefined,
+                  }));
+                  setFormError(null);
+                }}
+                visible={showPassword}
+                onToggleVisible={() => setShowPassword((v) => !v)}
+                error={fieldErrors.password}
+              />
 
-              <label className="block">
-                <span className="text-sm font-medium text-zinc-900">
-                  Confirm password
-                </span>
-                <input
-                  className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="Re-enter your password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
-                    setFormError(null);
-                  }}
-                  autoComplete="new-password"
-                />
-                {fieldErrors.confirmPassword ? (
-                  <p className="mt-2 text-sm text-red-600">{fieldErrors.confirmPassword}</p>
-                ) : null}
-              </label>
+              <PasswordFieldWithToggle
+                label="Confirm password"
+                placeholder="Re-enter your password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    confirmPassword: undefined,
+                  }));
+                  setFormError(null);
+                }}
+                visible={showConfirmPassword}
+                onToggleVisible={() => setShowConfirmPassword((v) => !v)}
+                error={fieldErrors.confirmPassword}
+                ariaLabelShow="Show confirm password"
+                ariaLabelHide="Hide confirm password"
+              />
 
               {formError ? (
-                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                   {formError}
                 </p>
               ) : null}
@@ -196,16 +223,16 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                className={authPrimaryButtonClass}
               >
                 {isSubmitting ? "Registering..." : "Register"}
               </button>
 
-              <p className="text-center text-sm text-zinc-600">
+              <p className="text-center text-sm text-slate-600">
                 Already have an account?{" "}
                 <Link
                   href="/login"
-                  className="font-semibold text-indigo-700 hover:text-indigo-600"
+                  className="font-bold text-cyan-700 hover:text-cyan-600"
                 >
                   Login
                 </Link>
@@ -217,4 +244,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-

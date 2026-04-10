@@ -1,81 +1,84 @@
 import Link from "next/link";
+import FeaturedPrograms from "./components/featured-programs";
+import HomeHeroActions from "./components/home-hero-actions";
 
 export default function Home() {
-  const courses = [
-    {
-      title: "Full-Stack Web Development",
-      description:
-        "Build production-ready apps with modern frontend and backend tools.",
-      level: "Intermediate",
-    },
-    {
-      title: "Data Analytics with Python",
-      description:
-        "Learn data cleaning, visualization, and practical analytics workflows.",
-      level: "Beginner",
-    },
-    {
-      title: "UI/UX Design Essentials",
-      description:
-        "Design user-centered products with wireframes, prototypes, and testing.",
-      level: "All Levels",
-    },
+  const stats = [
+    { value: "10+", label: "Years of excellence" },
+    { value: "11k+", label: "Learners worldwide" },
+    { value: "45+", label: "Countries represented" },
+    { value: "200+", label: "Hiring partners" },
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white px-4 py-12 sm:px-6 lg:px-8">
-      <section className="mx-auto w-full max-w-6xl">
-        <div className="rounded-3xl bg-white/90 p-8 shadow-lg ring-1 ring-zinc-200 backdrop-blur sm:p-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-4 inline-flex rounded-full bg-indigo-100 px-4 py-1 text-sm font-semibold text-indigo-700">
-              Live courses led by industry experts
-            </p>
-            <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl lg:text-6xl">
-              Learn Skills That Matter
-            </h1>
-            <p className="mt-5 text-base leading-7 text-zinc-600 sm:text-lg">
-              Join interactive live classes and gain practical skills you can
-              apply right away.
-            </p>
+    <>
+      <section className="relative overflow-hidden bg-mesh-dark px-4 pb-20 pt-12 text-white sm:px-6 sm:pb-28 sm:pt-16 lg:px-8 lg:pb-32 lg:pt-20">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-40"
+          aria-hidden
+        >
+          <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
+          <div className="absolute -right-10 bottom-0 h-96 w-96 rounded-full bg-blue-600/25 blur-3xl" />
+        </div>
+        <div className="relative mx-auto max-w-7xl">
+          <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-sky-200 backdrop-blur sm:text-sm">
+            Live courses · Expert-led · Project-based
+          </p>
+          <h1 className="font-display mt-6 max-w-4xl text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+            Your global career in tech{" "}
+            <span className="bg-gradient-to-r from-sky-300 to-blue-200 bg-clip-text text-transparent">
+              starts here
+            </span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg lg:text-xl">
+            Explore featured courses below—open a dedicated course page for full
+            details, or go to Enroll to pick your course and payment plan on
+            its own page (same as the header Enroll button).
+          </p>
+          <HomeHeroActions />
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 md:grid-cols-4 lg:gap-12">
+          {stats.map((s) => (
+            <div key={s.label} className="text-center md:text-left">
+              <p className="font-display text-3xl font-bold text-sky-600 sm:text-4xl">
+                {s.value}
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-600">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <FeaturedPrograms />
+
+      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-sky-900 px-8 py-14 text-center sm:px-12 sm:py-16 lg:px-16">
+          <h2 className="font-display text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
+            Ready to enroll?
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
+            Browse the full catalog for live batches, or open the enrollment page
+            to choose your program and payment plan.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/courses"
-              className="mt-8 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:text-base"
+              className="inline-flex w-full items-center justify-center rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-900 shadow-lg transition hover:bg-sky-50 sm:w-auto sm:text-base"
             >
-              Explore Courses
+              View all courses
+            </Link>
+            <Link
+              href="/enroll"
+              className="inline-flex w-full items-center justify-center rounded-full border-2 border-white/30 bg-white/10 px-8 py-4 text-sm font-bold text-white backdrop-blur transition hover:bg-white/15 sm:w-auto sm:text-base"
+            >
+              Enroll now
             </Link>
           </div>
         </div>
-
-        <section className="mt-12">
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
-            Featured Courses
-          </h2>
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <article
-                key={course.title}
-                className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <span className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                  {course.level}
-                </span>
-                <h3 className="mt-4 text-lg font-semibold text-zinc-900">
-                  {course.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-zinc-600">
-                  {course.description}
-                </p>
-                <button
-                  type="button"
-                  className="mt-5 w-fit rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-indigo-400 hover:text-indigo-700"
-                >
-                  View details
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
       </section>
-    </main>
+    </>
   );
 }
