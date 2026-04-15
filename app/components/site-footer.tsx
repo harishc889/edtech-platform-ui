@@ -4,8 +4,8 @@ export default function SiteFooter() {
   return (
     <footer className="border-t border-sky-950/60 bg-slate-900 text-slate-300">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 justify-items-center">
-          <div>
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="w-full text-center sm:text-left">
             <p className="font-display text-xl font-bold text-sky-100">
               LA Bim Academy
             </p>
@@ -13,7 +13,7 @@ export default function SiteFooter() {
             LA BIM Academy is a professional training institute focused on delivering industry-relevant BIM education. We help students, engineers, architects, and working professionals develop practical skills that connect academic knowledge with real-world construction and design project requirements.
             </p>
           </div>
-          <div>
+          <div className="w-full text-center sm:text-left">
             <p className="text-xs font-semibold uppercase tracking-wider text-sky-300/80">
               Quick Links
             </p>
@@ -70,7 +70,7 @@ export default function SiteFooter() {
               <li>la@labimsolutions.com</li>
             </ul>
           </div>
-          <div>
+          <div className="w-full text-center sm:text-left">
             <p className="text-xs font-semibold uppercase tracking-wider text-sky-300/80">
               Other Links
             </p>

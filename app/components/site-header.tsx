@@ -384,7 +384,7 @@ export default function SiteHeader() {
             ))}
             <Link
               href="/enroll"
-              className="rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-3 text-center text-sm font-semibold text-white"
+              className="rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-3 text-left text-sm font-semibold text-white"
               onClick={() => setOpen(false)}
             >
               Enroll now
