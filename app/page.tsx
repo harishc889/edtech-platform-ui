@@ -90,12 +90,12 @@ export default function Home() {
                 to choose your program and payment plan.
               </p>
               <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center md:justify-start">
-                <Link
-                  href="/courses"
+                <a
+                  href="#courses"
                   className="inline-flex h-14 w-full items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-8 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-900/30 transition hover:from-cyan-400 hover:to-blue-500 sm:w-auto sm:text-base"
                 >
                   View all courses
-                </Link>
+                </a>
                 <Link
                   href="/enroll"
                   className="inline-flex h-14 w-full items-center justify-center rounded-full border-2 border-white/35 bg-white/10 px-8 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20 sm:w-auto sm:text-base"
