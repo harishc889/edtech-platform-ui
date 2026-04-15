@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -7,8 +8,8 @@ import { useToast } from "@/app/components/toast-provider";
 import { fetchCurrentUser, logout, type AuthUser } from "@/lib/auth-service";
 import { PROGRAM_CATALOG } from "@/lib/program-catalog";
 
-const nav = [
-  { href: "/#courses", label: "Courses" },
+const navLinks = [
+  { href: "/", label: "Home" },
   { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact Us" },
 ];
@@ -140,15 +141,40 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:h-[4.25rem] sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 py-2 sm:min-h-[4.25rem] sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="font-display text-lg font-bold tracking-tight text-slate-900 transition hover:text-cyan-700 sm:text-xl"
+          className="group flex min-w-0 shrink-0 items-center gap-2.5 rounded-xl py-1 pr-1 transition hover:opacity-90 sm:gap-3"
         >
-          EdTech<span className="text-cyan-600">.</span>Academy
+          <span className="relative h-10 w-9 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200/90 sm:h-11 sm:w-10">
+            <Image
+              src="/images/la-bim-academy-logo.png"
+              alt=""
+              fill
+              className="object-contain object-center p-0.5"
+              sizes="(max-width: 640px) 36px, 44px"
+            />
+          </span>
+          <span className="flex min-w-0 flex-col text-left">
+            <span className="font-display text-base font-bold leading-tight tracking-tight text-slate-900 sm:text-xl sm:whitespace-nowrap">
+              <span className="block sm:inline">LA Bim </span>
+              <span className="block bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent transition group-hover:from-cyan-500 group-hover:to-blue-500 sm:inline">
+                Academy
+              </span>
+            </span>
+            <span className="mt-0.5 max-w-[11rem] text-[13px] font-medium leading-snug text-slate-500 sm:mt-1 sm:max-w-none sm:text-xs">
+              From Learning to Smart Building
+            </span>
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
+          <Link
+            href="/"
+            className="text-sm font-medium text-slate-600 transition hover:text-cyan-700"
+          >
+            Home
+          </Link>
           <div ref={desktopCoursesRef} className="relative">
             <button
               type="button"
@@ -187,7 +213,7 @@ export default function SiteHeader() {
             ) : null}
           </div>
 
-          {nav.slice(1).map((item) => (
+          {navLinks.slice(1).map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -300,6 +326,13 @@ export default function SiteHeader() {
       {open ? (
         <div className="border-t border-slate-100 bg-white px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-1">
+            <Link
+              href="/"
+              className="rounded-xl px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              Home
+            </Link>
             <button
               type="button"
               className="flex items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -339,7 +372,7 @@ export default function SiteHeader() {
               </div>
             ) : null}
 
-            {nav.slice(1).map((item) => (
+            {navLinks.slice(1).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

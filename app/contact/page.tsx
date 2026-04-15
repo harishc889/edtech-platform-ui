@@ -99,9 +99,7 @@ export default function ContactPage() {
                 Contact Details
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-300">
-                Reach out to us for BIM support on landscape, architectural, or
-                construction coordination projects. We are happy to discuss your
-                requirements and next steps.
+              Reach out to us to learn more about our BIM courses in architecture, structure, and MEP. We’re happy to guide you on the right course and help you take the next step in your career.
               </p>
 
               <div className="mt-6 space-y-4 text-sm">
@@ -130,7 +128,7 @@ export default function ContactPage() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-slate-200/80 bg-white p-7 shadow-sm shadow-slate-200/50 sm:p-8">
+            {/* <section className="rounded-3xl border border-slate-200/80 bg-white p-7 shadow-sm shadow-slate-200/50 sm:p-8">
               <h3 className="font-display text-xl font-bold text-slate-900">
                 Project details that help us respond faster
               </h3>
@@ -140,7 +138,7 @@ export default function ContactPage() {
                 and any available drawings or models. This helps us suggest the
                 right BIM services for you.
               </p>
-            </section>
+            </section> */}
           </aside>
         </div>
       </div>
