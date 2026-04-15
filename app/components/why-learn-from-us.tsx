@@ -234,7 +234,7 @@ export default function WhyLearnFromUs() {
             />
             <button
               type="button"
-              className={`${navButtonClass} absolute left-0 top-1/2 z-20 h-10 w-10 -translate-y-1/2 sm:h-12 sm:w-12`}
+              className={`${navButtonClass} absolute -left-3 top-1/2 z-20 h-10 w-10 -translate-y-1/2 sm:-left-4 sm:h-12 sm:w-12`}
               aria-label="Show previous reasons"
               disabled={!canPrev}
               onClick={() => scrollByViewport(-1)}
@@ -243,7 +243,7 @@ export default function WhyLearnFromUs() {
             </button>
             <button
               type="button"
-              className={`${navButtonClass} absolute right-0 top-1/2 z-20 h-10 w-10 -translate-y-1/2 sm:h-12 sm:w-12`}
+              className={`${navButtonClass} absolute -right-3 top-1/2 z-20 h-10 w-10 -translate-y-1/2 sm:-right-4 sm:h-12 sm:w-12`}
               aria-label="Show next reasons"
               disabled={!canNext}
               onClick={() => scrollByViewport(1)}

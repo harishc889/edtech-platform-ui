@@ -74,7 +74,7 @@ export default function ContactPage() {
                 <span className="text-sm font-semibold text-slate-700">Message</span>
                 <textarea
                   rows={6}
-                  placeholder="Describe your project, site, or requirements..."
+                  placeholder="Describe your course, payment related queries..."
                   className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-cyan-500/30 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
                 />
               </label>
@@ -109,7 +109,7 @@ export default function ContactPage() {
                     href="mailto:la@labimsolutions.com"
                     className="mt-1 inline-block font-semibold text-white transition hover:text-cyan-300"
                   >
-                    la@labimsolutions.com
+                    la@labimacademy.com
                   </a>
                 </div>
                 <div>
@@ -118,13 +118,13 @@ export default function ContactPage() {
                     href="tel:+917017578290"
                     className="mt-1 inline-block font-semibold text-white transition hover:text-cyan-300"
                   >
-                    +91-7017578290
+                    +91-7017978290
                   </a>
                 </div>
-                <div>
+                {/* <div>
                   <p className="text-slate-400">Location</p>
                   <p className="mt-1 font-semibold text-white">Vasant Kunj, India</p>
-                </div>
+                </div> */}
               </div>
             </section>
 

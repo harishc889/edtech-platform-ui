@@ -24,9 +24,9 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/course" className="transition hover:text-sky-200">
+                <a href="/#courses" className="transition hover:text-sky-200">
                   Courses
-                </Link>
+                </a>
               </li>
               <li>
                 <Link href="/about" className="transition hover:text-sky-200">
@@ -76,7 +76,7 @@ export default function SiteFooter() {
             </p>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                <Link href="/fee-payment" className="text-slate-400 transition hover:text-sky-200">
+                <Link href="/enroll" className="text-slate-400 transition hover:text-sky-200">
                   Fee Payment
                 </Link>
               </li>
