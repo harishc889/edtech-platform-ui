@@ -95,3 +95,46 @@ body {
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
+
+/* FAQ answers rendered via dangerouslySetInnerHTML — keep markup simple (p, ul, li, strong, a). */
+.home-faq-html :where(p) {
+  margin: 0;
+  margin-top: 0.75rem;
+  line-height: 1.65;
+  color: rgb(255 255 255 / 0.95);
+}
+
+.home-faq-html :where(p:first-child) {
+  margin-top: 0;
+}
+
+.home-faq-html :where(ul) {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+  list-style-type: disc;
+  color: rgb(255 255 255 / 0.95);
+}
+
+.home-faq-html :where(li) {
+  margin-top: 0.5rem;
+  line-height: 1.6;
+}
+
+.home-faq-html :where(li:first-child) {
+  margin-top: 0;
+}
+
+.home-faq-html :where(strong) {
+  font-weight: 600;
+  color: rgb(255 255 255);
+}
+
+.home-faq-html :where(a) {
+  color: rgb(125 211 252);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.home-faq-html :where(a:hover) {
+  color: rgb(186 230 253);
+}

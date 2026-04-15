@@ -4,17 +4,13 @@ export default function SiteFooter() {
   return (
     <footer className="border-t border-sky-950/60 bg-slate-900 text-slate-300">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 justify-items-center">
           <div>
-            <p className="font-display text-lg font-bold text-sky-100">
-              LA Bim Solutions
+            <p className="font-display text-xl font-bold text-sky-100">
+              LA Bim Academy
             </p>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              LA Bim Solutions is an emerging and dynamic organization in the
-              Design, Engineering, and Construction Technology sector, committed
-              to delivering high-quality BIM (Building Information Modeling) and
-              VDC (Virtual Design and Construction) services to a diverse range
-              of clients across the construction industry.
+            LA BIM Academy is a professional training institute focused on delivering industry-relevant BIM education. We help students, engineers, architects, and working professionals develop practical skills that connect academic knowledge with real-world construction and design project requirements.
             </p>
           </div>
           <div>
@@ -28,20 +24,16 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/course" className="transition hover:text-sky-200">
+                  Courses
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="transition hover:text-sky-200">
                   About Us
                 </Link>
-              </li>
-              <li>
-                <Link href="/services" className="transition hover:text-sky-200">
-                  Services
-                </Link>
-              </li>
-              <li>
-                <Link href="/projects" className="transition hover:text-sky-200">
-                  Projects
-                </Link>
-              </li>
+              </li>            
+              
               <li>
                 <Link href="/contact" className="transition hover:text-sky-200">
                   Contact Us
@@ -49,7 +41,7 @@ export default function SiteFooter() {
               </li>
             </ul>
           </div>
-          <div>
+          <div className="hidden">
             <p className="text-xs font-semibold uppercase tracking-wider text-sky-300/80">
               Services
             </p>
@@ -68,7 +60,7 @@ export default function SiteFooter() {
               </li>
             </ul>
           </div>
-          <div>
+          <div className="hidden">
             <p className="text-xs font-semibold uppercase tracking-wider text-sky-300/80">
               Contact
             </p>
@@ -93,11 +85,11 @@ export default function SiteFooter() {
                   Contact Us
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link href="/sitemap" className="text-slate-400 transition hover:text-sky-200">
                   Sitemap
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <Link href="/cancellation-policy" className="text-slate-400 transition hover:text-sky-200">
                   Cancellation Policy
@@ -118,7 +110,7 @@ export default function SiteFooter() {
                   Terms &amp; Conditions
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link href="/evaluation-criteria" className="text-slate-400 transition hover:text-sky-200">
                   Evaluation Criteria
                 </Link>
@@ -127,12 +119,12 @@ export default function SiteFooter() {
                 <Link href="/referral-terms" className="text-slate-400 transition hover:text-sky-200">
                   Terms &amp; Conditions for Referral Program
                 </Link>
-              </li>
+              </li> */}
             </ul>
           </div>
         </div>
         <div className="mt-12 border-t border-slate-800 pt-8 text-center text-xs text-slate-500">
-          © {new Date().getFullYear()} LA Bim Solutions. All rights reserved.
+          © {new Date().getFullYear()} LA Bim Academy. All rights reserved.
         </div>
       </div>
     </footer>
