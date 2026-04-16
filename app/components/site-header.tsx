@@ -156,13 +156,13 @@ export default function SiteHeader() {
             />
           </span>
           <span className="flex min-w-0 flex-col text-left">
-            <span className="font-display text-base font-bold leading-tight tracking-tight text-slate-900 sm:text-xl sm:whitespace-nowrap">
-              <span className="block sm:inline">LA Bim </span>
-              <span className="block bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent transition group-hover:from-cyan-500 group-hover:to-blue-500 sm:inline">
+            <span className="font-display text-sm font-bold leading-tight tracking-normal text-slate-900 whitespace-nowrap sm:text-xl sm:tracking-tight">
+              <span className="inline">LA Bim </span>
+              <span className="inline bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent transition group-hover:from-cyan-500 group-hover:to-blue-500">
                 Academy
               </span>
             </span>
-            <span className="mt-0.5 max-w-[11rem] text-[13px] font-medium leading-snug text-slate-500 sm:mt-1 sm:max-w-none sm:text-xs">
+            <span className="mt-0.5 text-[10px] font-medium leading-tight whitespace-nowrap text-slate-500 sm:mt-1 sm:text-xs">
               From Learning to Smart Building
             </span>
           </span>
