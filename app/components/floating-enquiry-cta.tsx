@@ -31,7 +31,7 @@ export default function FloatingEnquiryCta() {
       </Link>
 
       <Link
-        href="https://www.linkedin.com/posts/labimacademy_bim-digitalconstruction-aec-activity-7450210822720630784-GVoP?utm_source=share&utm_medium=member_ios&rcm=ACoAAClfoD8BIREr_pUw-uZbpo2bEjoEPzL2uZk"
+        href="https://www.linkedin.com/company/labimacademy/"
         aria-label="LinkedIn"
         target="_blank"
         className="group relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-[#0A66C2] shadow-lg shadow-slate-300/60 transition hover:scale-105"
