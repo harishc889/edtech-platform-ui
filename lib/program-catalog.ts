@@ -5,12 +5,18 @@ export type PaymentOption = {
   amountInr: number;
 };
 
+
 export type Program = {
   id: string;
   title: string;
   subtitle: string;
   duration: string;
+  hours: string;
+  internshipDuration: string;
+  internshipHours: string;
   language: string;
+  mode: string;
+  assessments: string;
   eligibility: string;
   /**
    * Card hero background image, served from `public/`.
@@ -22,6 +28,12 @@ export type Program = {
   highlights: string[];
   engineeringBenefits: string[];
   modules: Array<{ title: string; hours: string; desc: string }>;
+  tools?: Array<{ name: string; imagePath: string }>;
+  certifications?: Array<{
+    title: string;
+    description: string;
+    imagePath: string;
+  }>;
   learningOutcomes: string[];
   careerRoles: string[];
   criteriaSummary: {
@@ -43,7 +55,12 @@ export const PROGRAM_CATALOG: Program[] = [
     title: "BIM-Architecture",
     subtitle: "Certification in BIM Architecture",
     duration: "2 months",
+    hours: "60 Hours",
+    internshipDuration: "2 months",
+    internshipHours: "60 Hours",
     language: "Hindi/English",
+    mode: "Online",
+    assessments: "3",
     eligibility: "Bachelor’s in Architecture",
     cardCoverImage: "/images/courses/bim-arch.png",
     // level: "Advanced",
@@ -62,41 +79,146 @@ export const PROGRAM_CATALOG: Program[] = [
     ],
     modules: [
       {
-        title: "Advanced BIM Strategy",
+        title: "BIM Fundamentals + Revit Basics",
         hours: "10 Hours",
-        desc: "Program governance, execution planning, delivery frameworks, and standards.",
+        desc: `<p>Goal: Understand BIM workflow + start Revit</p>
+                <ul>
+                  <li>Introduction to BIM concepts (LOD, clash detection, coordination)</li>
+                  <li>BIM lifecycle (Design → Construction → Facility Management)</li>
+                  <li>Interface of Autodesk Revit</li>
+                  <li>Project setup (units, templates, levels, grids)</li>
+                  <li>Basic drawing tools (walls, doors, windows)</li>           
+                </ul>
+                <p>Practice: Create a simple 2D floor plan in Revit</p>
+              `,
       },
       {
-        title: "Model Authoring Excellence",
+        title: "Revit Architectural Modeling",
         hours: "30 Hours",
-        desc: "Advanced authoring, standards libraries, and quality-first documentation.",
+        desc: `<p>Goal: Build full architectural model</p>
+                <ul>
+                <li>Walls, floors, roofs, ceilings</li>
+                <li>Curtain walls & glazing systems</li>
+                <li>Stairs, ramps, railings</li>
+                <li>Families (loadable vs system families)</li>
+                <li>Basic annotation (dimensions, tags)</li>
+                  
+                </ul>
+                <p>Practice: Model a residential house (LOD 200)</p>
+                `,
       },
       {
-        title: "Coordination & Federation",
+        title: "Advanced Revit + Documentation",
         hours: "28 Hours",
-        desc: "Clash resolution protocols, issue dashboards, and cross-team review cycles.",
+        desc: `<p>Goal: Make project sheets & details</p>
+                <ul>
+                  <li>Views (plans, sections, elevations, 3D)</li>
+                  <li>Sheet creation & title blocks</li>
+                  <li>Schedules (doors, windows, materials)</li>
+                  <li>Phasing & design options</li>
+                  <li>Basic rendering in Revit</li>
+                </ul>
+                <p>Practice: Complete drawing set (plans + sections + sheets)</p>
+        `,
       },
       {
-        title: "4D/5D & Data Workflows",
+        title: "Revit Collaboration + BIM Workflow",
         hours: "26 Hours",
-        desc: "Schedule-cost integration and data extraction for execution reporting.",
+        desc: `<p>Goal: Work in team environment</p>
+                <ul>
+                  <li>Worksharing (central & local files)</li>
+                  <li>Linking CAD & Revit models</li>
+                  <li>Coordination with structural & MEP</li>
+                  <li>Introduction to cloud collaboration via Autodesk BIM 360</li>
+                </ul>
+                <p>Practice: Simulate multi-user project</p>
+                `,
       },
       {
-        title: "Information Management",
+        title: "Navisworks for Coordination",
         hours: "24 Hours",
-        desc: "CDE workflows, naming conventions, and audit-ready data structures.",
+        desc: `<p>Goal: Clash detection & model review</p>
+                <ul>
+                  <li>Interface of Autodesk Navisworks</li>
+                  <li>Importing Revit models (NWC/NWD)</li>
+                  <li>Clash detection (hard & soft clashes)</li>
+                  <li>Timeliner (4D simulation basics)</li>
+                  <li>Quantification basics</li>
+                </ul>
+                <p>Practice: Detect clashes between architectural & structural models</p>
+                `,
       },
       {
-        title: "Capstone & Portfolio",
+        title: "BIM 360 / Autodesk Construction Cloud",
         hours: "20 Hours",
-        desc: "Real-project simulation, mentor review, and portfolio positioning.",
+        desc: `<p>Goal: Cloud-based BIM management</p>
+                <ul>
+                  <li>Overview of Autodesk Construction Cloud</li>
+                  <li>Document management & version control</li>
+                  <li>Model coordination workflows</li>
+                  <li>Issue tracking & RFIs</li>
+                  <li>Design collaboration module</li>
+                </ul>
+                `,
       },
+      {
+        title: "Bluebeam for Documentation & Review",
+        hours: "12 Hours",
+        desc: `<p>Goal: PDF workflows & site coordination</p>
+                <ul>
+                  <li>Interface of Bluebeam Revu</li>
+                  <li>Markups & annotations</li>
+                  <li>Measurement tools (area, length)</li>
+                  <li>Studio sessions (real-time collaboration)</li>
+                  <li>Creating reports from markups</li>
+                </ul>
+                <p>Practice: Review construction drawings and add markups</p>
+                `,
+      },
+      {
+        title: "Final Project + Integration",
+        hours: "10 Hours",
+        desc: `<p>Goal: Apply full BIM workflow</p>
+                <p>Create complete BIM project:</p>
+                <ul>
+                  <li>Revit model (LOD 300)</li>
+                  <li>Export to Navisworks for clash detection</li>
+                  <li>Upload to BIM 360/ACC</li>
+                  <li>Review via Bluebeam</li>
+                </ul>
+                `,
+      },
+      
+    ],
+    tools: [
+      { name: "Revit", imagePath: "/images/tools/revit.png" },
+      { name: "Navisworks", imagePath: "/images/tools/naviswork.png" },
+      { name: "Autodesk BIM 360", imagePath: "/images/tools/bim360.png" },
+      { name: "Autodesk Construction Cloud", imagePath: "/images/tools/acc.png" },
+      { name: "Bluebeam", imagePath: "/images/tools/bluebeam.jpg" }
+    ],
+    certifications: [
+      {
+        title: "Work Experience Certificate",
+        description: "More than a certificate—it’s your gateway to BIM jobs.”",
+        imagePath: "/images/certificates/certificateOfCompletion.png",
+      },
+      {
+        title: "Internship Letter",
+        description: "This isn’t just a letter; it’s your BIM job offer waiting to happen.",
+        imagePath: "/images/certificates/internshipLetter.png",
+      },
+      // {
+      //   title: "ISO 19650 Certified BIM Professional",
+      //   description: "Add your certificate details and description.",
+      //   imagePath: "",
+      // },
     ],
     learningOutcomes: [
-      "Design and run enterprise BIM delivery systems.",
-      "Lead multidisciplinary collaboration with measurable quality metrics.",
-      "Implement data-driven BIM workflows for project controls.",
-      "Present portfolio artifacts aligned to senior BIM roles.",
+      "Develop intelligent 3D architectural models using Autodesk Revit",
+      "Create accurate drawings including plans, sections, and elevations",
+      "Apply real-world BIM workflows and industry standards",
+      "Build a professional portfolio for job opportunities",
     ],
     careerRoles: [
       "BIM Manager",
@@ -118,7 +240,12 @@ export const PROGRAM_CATALOG: Program[] = [
     title: "BIM Structure",
     subtitle: "Certification in BIM Structure",
     duration: "2 months",
+    hours: "60 Hours",
+    internshipDuration: "2 months",
+    internshipHours: "60 Hours",
     language: "Hindi/English",
+    mode: "Online",
+    assessments: "3",
     eligibility: "Bachelor’s in Civil, Master's in Structure",
     cardCoverImage: "/images/courses/bim-str.jpg",
     // level: "Intermediate",
@@ -193,7 +320,12 @@ export const PROGRAM_CATALOG: Program[] = [
     title: "BIM MEP",
     subtitle: "Certification in BIM MEP",
     duration: "2 months",
+    hours: "60 Hours",
+    internshipDuration: "2 months",
+    internshipHours: "60 Hours",
     language: "Hindi/English",
+    mode: "Online",
+    assessments: "3",
     eligibility: "Bachelor’s in Mechanical or Electrical",
     cardCoverImage: "/images/courses/bim-mep.png",
     // level: "Intermediate",
@@ -268,7 +400,12 @@ export const PROGRAM_CATALOG: Program[] = [
     title: "BIM Civil",
     subtitle: "Certification in BIM Structure",
     duration: "2 months",
+    hours: "60 Hours",
+    internshipDuration: "2 months",
+    internshipHours: "60 Hours",
     language: "Hindi/English",
+    mode: "Online",
+    assessments: "3",
     eligibility:
       "Bachelor’s in civil",
     cardCoverImage: "/images/courses/bim-civil.png",
@@ -344,7 +481,12 @@ export const PROGRAM_CATALOG: Program[] = [
     title: "BIM Complete",
     subtitle: "Certification in BIM Modeling & Coordination",
     duration: "4 months",
+    hours: "120 Hours",
+    internshipDuration: "4 months",
+    internshipHours: "120 Hours",
     language: "Hindi/English",
+    mode: "Online",
+    assessments: "3",
     eligibility:
       "Bachelor’s in civil, Architecture,Mechanical or Electrical",
     cardCoverImage: "/images/courses/bim-complete.jpg",

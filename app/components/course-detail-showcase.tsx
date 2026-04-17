@@ -1,319 +1,400 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { useMemo, useState } from "react";
 import type { Program } from "@/lib/program-catalog";
 
 type Props = {
   course: Program;
   enrollHref: string;
   courseFeeInr: string;
-  durationHours: string;
 };
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function toModuleDescriptionHtml(desc: string) {
+  const trimmed = desc.trim();
+  if (!trimmed) return "";
+
+  // If author already provided HTML (ul/li/p), render as-is.
+  if (/<(ul|ol|li|p|br)\b/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const lines = trimmed
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return "";
+
+  const firstLine = escapeHtml(lines[0]);
+  const isGoal = firstLine.toLowerCase().startsWith("goal:");
+  const bullets = (isGoal ? lines.slice(1) : lines).map(escapeHtml);
+  const goalHtml = isGoal
+    ? `<p class="font-semibold text-slate-900">${firstLine}</p>`
+    : "";
+  const listItems = bullets.map((line) => `<li>${line}</li>`).join("");
+  const listHtml = `<ul class="module-bullets">${listItems}</ul>`;
+
+  return `${goalHtml}${listHtml}`;
+}
 
 export default function CourseDetailShowcase({
   course,
   enrollHref,
   courseFeeInr,
-  durationHours,
 }: Props) {
-  const overviewCards = useMemo(
+  const [expandedModule, setExpandedModule] = useState<number>(0);
+  const toolItems = useMemo(() => {
+    if (course.tools && course.tools.length > 0) return course.tools;
+    return Array.from({ length: 14 }).map((_, idx) => ({
+      name: `Tool ${idx + 1}`,
+      imagePath: "",
+    }));
+  }, [course.tools]);
+  const certificationItems = useMemo(() => {
+    if (course.certifications && course.certifications.length > 0) {
+      return course.certifications;
+    }
+    return Array.from({ length: 14 }).map((_, idx) => ({
+      title: `Certificate ${idx + 1}`,
+      description: "Add your certificate details and description.",
+      imagePath: "",
+    }));
+  }, [course.certifications]);
+  const stats = useMemo(
     () => [
-      { title: "Duration", value: `${course.duration}, ${durationHours}` },
+      { title: "Course Duration", value: `${course.duration} (${course.hours})` },
+      { title: "Internship Duration", value: `${course.internshipDuration} (${course.internshipHours})` },
+      { title: "Modules", value: `${course.modules.length}+` },
+      { title: "Assessments", value: `${course.assessments}` },
       { title: "Language", value: course.language },
-      { title: "No. of Modules", value: String(course.modules.length) },
+      { title: "Mode", value: course.mode },
+
     ],
-    [course.duration, durationHours, course.language, course.modules.length],
+    [course.duration, course.hours, course.internshipDuration, course.internshipHours, course.language, course.modules.length, course.careerRoles.length],
   );
-  const [activeOverview, setActiveOverview] = useState(1);
-  const [expandedModule, setExpandedModule] = useState<number | null>(null);
-  const [activeBenefit, setActiveBenefit] = useState<number | null>(null);
-  const [activeCareer, setActiveCareer] = useState<number | null>(null);
-  const [overviewPaused, setOverviewPaused] = useState(false);
-  const moduleRailRef = useRef<HTMLDivElement | null>(null);
-  const benefitIcons = ["🤝", "⚙️", "✅", "🌍"];
-  const careerIcons = ["🏗️", "📐", "🌉", "🧭", "🛠️", "📊"];
-
-  useEffect(() => {
-    if (overviewPaused) return;
-    const timer = window.setInterval(() => {
-      setActiveOverview((p) => (p + 1) % overviewCards.length);
-    }, 3500);
-
-    return () => window.clearInterval(timer);
-  }, [overviewCards.length, overviewPaused]);
-
-  function prevCard() {
-    setActiveOverview((p) => (p - 1 + overviewCards.length) % overviewCards.length);
-  }
-  function nextCard() {
-    setActiveOverview((p) => (p + 1) % overviewCards.length);
-  }
-  function scrollModules(direction: "left" | "right") {
-    const target = moduleRailRef.current;
-    if (!target) return;
-    const shift = direction === "left" ? -300 : 300;
-    target.scrollBy({ left: shift, behavior: "smooth" });
-  }
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/40">
-      <section className="px-6 py-10 sm:px-10 sm:py-12">
-        <p className="text-center text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-          / Program Overview /
-        </p>
-        <h1 className="font-display mx-auto mt-3 max-w-4xl text-center text-3xl font-extrabold text-slate-900 sm:text-4xl">
-          Specialize with {course.title}
-        </h1>
-        <p className="mx-auto mt-3 max-w-3xl text-center text-base leading-relaxed text-slate-600">
-          {course.subtitle}
-        </p>
-
+    <article className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50">
+      <section className="relative overflow-hidden px-6 py-12 text-white sm:px-10 sm:py-14">
         <div
-          className="mt-8 flex items-center justify-center gap-2 sm:gap-6"
-          onMouseEnter={() => setOverviewPaused(true)}
-          onMouseLeave={() => setOverviewPaused(false)}
-        >
-          <button
-            type="button"
-            onClick={prevCard}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-200 text-sky-700 transition hover:bg-sky-50"
-            aria-label="Previous overview card"
-          >
-            ←
-          </button>
-
-          <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-3">
-            {overviewCards.map((card, index) => {
-              const active = index === activeOverview;
-              return (
-                <div
-                  key={card.title}
-                  className={`rounded-3xl border p-6 text-center transition ${
-                    active
-                      ? "border-sky-300 bg-gradient-to-br from-sky-600 to-blue-500 text-white shadow-lg shadow-sky-200"
-                      : "border-slate-200 bg-slate-50/80 text-slate-800"
-                  }`}
-                >
-                  <p
-                    className={`text-xs font-bold uppercase tracking-wider ${active ? "text-sky-100" : "text-slate-500"}`}
-                  >
-                    {card.title}
-                  </p>
-                  <p className="mt-2 text-xl font-bold">{card.value}</p>
-                </div>
-              );
-            })}
+          className="absolute inset-0 bg-cover bg-center"
+          aria-hidden
+          style={{
+            backgroundImage: "url('/images/courses/course-hero-reference.png')",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg, rgb(255 255 255 / 0.86) 0%, rgb(255 255 255 / 0.72) 44%, rgb(15 23 42 / 0.25) 100%)",
+          }}
+        />
+        <div className="relative max-w-3xl">
+          <div>
+            <p className="inline-flex rounded-full border border-sky-700/20 bg-white/75 px-4 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-sky-900">
+              BIM Program
+            </p>
+            <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-slate-950 sm:text-4xl lg:text-5xl">
+              {course.title}
+            </h1>
+            <p className="mt-3 text-lg font-semibold text-sky-900">{course.subtitle}</p>
+            {/* <p className="mt-5 max-w-2xl text-sm leading-relaxed text-slate-800 sm:text-base">
+              {course.description ??
+                "Build practical BIM expertise with live mentorship, structured studio modules, and career-aligned project training."}
+            </p> */}
+            <div className="mt-8 flex flex-wrap gap-3 sm:flex-nowrap">
+              <Link
+                href={enrollHref}
+                className="h-8 inline-flex items-center justify-center rounded-full border border-slate-900/20 bg-white px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-sky-50"
+              >
+                Request a callback
+              </Link>
+              <Link
+                href="/#courses"
+                className="h-8 inline-flex items-center justify-center rounded-full border border-slate-900/20 bg-white/70 px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-white"
+              >
+                View all courses
+              </Link>
+            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={nextCard}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-200 text-sky-700 transition hover:bg-sky-50"
-            aria-label="Next overview card"
-          >
-            →
-          </button>
-        </div>
-        <div className="mt-4 flex items-center justify-center gap-2">
-          {overviewCards.map((card, idx) => (
-            <button
-              key={card.title}
-              type="button"
-              onClick={() => setActiveOverview(idx)}
-              aria-label={`Go to ${card.title} card`}
-              className={`h-2.5 rounded-full transition ${
-                activeOverview === idx ? "w-7 bg-sky-600" : "w-2.5 bg-sky-200 hover:bg-sky-300"
-              }`}
-            />
-          ))}
         </div>
       </section>
 
-      <section className="grid gap-8 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-2">
+      <section className="grid gap-4 border-t border-slate-100 px-6 py-10 sm:grid-cols-2 sm:px-10 lg:grid-cols-4">
+        {stats.map((item) => (
+          <div key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+              {item.title}
+            </p>
+            <p className="mt-2 text-xl font-bold text-slate-900">{item.value}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* <section className="grid gap-8 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-            / About BIM /
+            Need Of The Hour
           </p>
           <h2 className="font-display mt-3 text-3xl font-bold text-slate-900">
-            BIM - A Revolution in the AEC Industry
+            BIM essential. Computational thinking future-ready.
           </h2>
           <p className="mt-4 text-base leading-relaxed text-slate-600">
-            {course.description}
+            This course combines practical BIM implementation with modern digital workflows so
+            you do not have to choose between foundations and advanced capability.
           </p>
-        </div>
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-sky-900 p-8">
-          <div
-            className="absolute inset-0 opacity-45"
-            aria-hidden
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 80% 20%, rgb(56 189 248 / 0.35), transparent 40%), radial-gradient(circle at 20% 80%, rgb(59 130 246 / 0.3), transparent 45%)",
-            }}
-          />
-          <div className="relative grid h-full place-items-center">
-            <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-sky-100 backdrop-blur">
-              Intelligent BIM Visual Representation
-            </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {course.highlights.map((point) => (
+              <div
+                key={point}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"
+              >
+                {point}
+              </div>
+            ))}
           </div>
         </div>
-      </section>
-
-      <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
-        <p className="text-center text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-          / Civil Engineering /
-        </p>
-        <h2 className="font-display mt-3 text-center text-3xl font-bold text-slate-900">
-          BIM in Civil Engineering
-        </h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {course.engineeringBenefits.map((item, idx) => (
-            <div
-              key={item}
-              className="group rounded-2xl border border-slate-200 bg-slate-50/80 p-5 text-center transition duration-300 hover:-translate-y-1 hover:border-sky-300 hover:bg-white hover:shadow-lg hover:shadow-sky-100"
-              onMouseEnter={() => setActiveBenefit(idx)}
-              onMouseLeave={() =>
-                setActiveBenefit((current) => (current === idx ? null : current))
-              }
-            >
-              <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-sky-100 text-lg text-sky-700 transition group-hover:bg-sky-200">
-                {benefitIcons[idx % benefitIcons.length]}
-              </div>
-              <p className="mt-3 text-sm font-semibold text-slate-800">{item}</p>
-              <p
-                className={`mt-2 text-xs leading-relaxed text-slate-600 transition-all duration-300 ${
-                  activeBenefit === idx
-                    ? "max-h-16 opacity-100"
-                    : "max-h-0 overflow-hidden opacity-0 group-hover:max-h-16 group-hover:opacity-100"
-                }`}
-              >
-                BIM enables stronger decision-making with measurable outcomes for this
-                focus area.
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-8 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-2">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-sky-900 p-8">
-          <div
-            className="absolute inset-0 opacity-45"
-            aria-hidden
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 20% 20%, rgb(56 189 248 / 0.35), transparent 40%), radial-gradient(circle at 80% 80%, rgb(59 130 246 / 0.28), transparent 45%)",
-            }}
-          />
-          <div className="relative h-full rounded-2xl border border-white/15 bg-white/5" />
-        </div>
-        <div>
+        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 to-sky-50 p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-            / Course Highlights /
+            Why Learners Choose This
           </p>
-          <h2 className="font-display mt-3 text-3xl font-bold text-slate-900">
-            Transform your career with expert BIM proficiency
-          </h2>
-          <ul className="mt-5 space-y-3 text-base text-slate-700">
-            {course.highlights.map((point) => (
-              <li key={point} className="flex gap-2">
-                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-600" />
-                <span>{point}</span>
+          <ul className="mt-4 space-y-3 text-sm text-slate-700">
+            {course.engineeringBenefits.map((item) => (
+              <li key={item} className="flex items-start gap-3">
+                <span className="mt-1 inline-block h-2 w-2 rounded-full bg-sky-600" />
+                <span>{item}</span>
               </li>
             ))}
           </ul>
+          <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">
+            You are not just learning software. You are training for placement-ready BIM
+            project delivery.
+          </div>
         </div>
+      </section> */}
+
+      <section className="grid gap-8 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-[1.4fr_0.9fr]">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+            Course Modules
+          </p>
+          {/* <h2 className="font-display mt-3 text-3xl font-bold text-slate-900">
+            Learn Through Structured Studio Sprints
+          </h2> */}
+          <div className="mt-6 grid gap-4">
+            {course.modules.map((module, idx) => {
+              return (
+                <article
+                  key={module.title}
+                  className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${
+                    expandedModule === idx
+                      ? "border-sky-300 shadow-sky-100"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-700">
+                        Week {idx + 1}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-expanded={expandedModule === idx}
+                      aria-controls={`module-panel-${idx}`}
+                      onClick={() =>
+                        setExpandedModule((current) => (current === idx ? -1 : idx))
+                      }
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        expandedModule === idx
+                          ? "bg-sky-100 text-sky-800"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span
+                        className={`text-sm leading-none transition-transform ${
+                          expandedModule === idx ? "rotate-180" : ""
+                        }`}
+                      >
+                        ▾
+                      </span>
+                    </button>
+                  </div>
+                  <h3 className="mt-2 text-lg font-bold text-slate-900">{module.title}</h3>
+                  <div
+                    id={`module-panel-${idx}`}
+                    className={`overflow-hidden transition-all duration-300 ${
+                      expandedModule === idx
+                        ? "mt-3 max-h-[28rem] opacity-100"
+                        : "max-h-0 opacity-0"
+                    }`}
+                  >
+                  <div
+                    className="text-sm leading-relaxed text-slate-700 [&_ul]:mt-2 [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:list-disc [&_li]:marker:text-sky-600"
+                    dangerouslySetInnerHTML={{
+                      __html: toModuleDescriptionHtml(module.desc),
+                    }}
+                  />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Learning Outcomes
+            </p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-700">
+              {course.learningOutcomes.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-600" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* <div className="rounded-3xl border border-slate-200 bg-white p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Career Roles
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {course.careerRoles.map((role) => (
+                <span
+                  key={role}
+                  className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-900"
+                >
+                  {role}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-600 to-blue-600 p-6 text-white shadow-lg shadow-sky-200/70">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-100">
+              Enrollment
+            </p>
+            <p className="mt-2 text-2xl font-extrabold">INR {courseFeeInr}</p>
+            <p className="mt-2 text-sm text-sky-100">Seat booking starts from INR {new Intl.NumberFormat("en-IN").format(course.seatBookingInr)}.</p>
+            <Link
+              href={enrollHref}
+              className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-sky-50"
+            >
+              Enroll now
+            </Link>
+          </div> */}
+        </aside>
       </section>
 
       <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
-        <p className="text-center text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-          / Course Modules /
-        </p>
-        <h2 className="font-display mt-3 text-center text-3xl font-bold text-slate-900">
-          Unlocking Innovation and Methodologies with BIM
-        </h2>
-        <div className="mt-8 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => scrollModules("left")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 text-sky-700 transition hover:bg-sky-50"
-            aria-label="Scroll modules left"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollModules("right")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 text-sky-700 transition hover:bg-sky-50"
-            aria-label="Scroll modules right"
-          >
-            →
-          </button>
-        </div>
-        <div
-          ref={moduleRailRef}
-          className="mt-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory"
-        >
-          <div className="grid w-max min-w-full auto-cols-[16rem] grid-flow-col gap-4 pr-4">
-            {course.modules.map((m, idx) => (
-              <article
-                key={m.title}
-                className="group relative snap-start rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg hover:shadow-sky-100"
-                onMouseEnter={() => setExpandedModule(idx)}
-                onMouseLeave={() => setExpandedModule((current) => (current === idx ? null : current))}
+        <div className="mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-5 sm:p-8">
+          <h3 className="text-center text-lg font-bold text-white sm:text-2xl">
+          Get Ready to BIM: Unlock 5 Powerful Software Tools to Elevate Your Career
+          </h3>
+          {/* <p className="mt-2 text-center text-xs text-slate-300 sm:text-sm">
+            Replace each placeholder with your own tool icon/photo.
+          </p> */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {toolItems.map((tool, idx) => (
+              <div
+                key={`tool-placeholder-${idx + 1}`}
+                className="flex h-16 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-white text-center shadow-sm sm:h-20"
               >
-                <div className="flex items-center justify-between">
-                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-800">
-                    Module {idx + 1}
-                  </span>
-                  <span className="text-xs font-medium text-slate-500">{m.hours}</span>
-                </div>
-                <div
-                  className="relative mt-3 h-24 rounded-xl border border-sky-100/70 bg-gradient-to-br from-slate-900 via-sky-900 to-blue-500 transition group-hover:brightness-110"
-                  style={{
-                    backgroundImage: `radial-gradient(circle at 20% 20%, rgb(56 189 248 / 0.4), transparent 38%), radial-gradient(circle at 80% 85%, rgb(59 130 246 / 0.35), transparent 40%)`,
-                  }}
-                >
-                  <span className="absolute left-2 top-2 rounded-md bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">
-                    Software {idx + 1}
-                  </span>
-                  <span className="absolute bottom-2 right-2 rounded-full border border-white/35 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-sky-100">
-                    BIM
-                  </span>
-                </div>
-                <h3 className="mt-3 text-sm font-semibold text-slate-900">{m.title}</h3>
-
-                <p
-                  className={`mt-2 text-xs leading-relaxed text-slate-600 transition-all duration-300 ${
-                    expandedModule === idx
-                      ? "max-h-28 opacity-100"
-                      : "max-h-0 overflow-hidden opacity-0 group-hover:max-h-28 group-hover:opacity-100"
-                  }`}
-                >
-                  {m.desc}
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExpandedModule((current) => (current === idx ? null : idx))
-                  }
-                  className="mt-3 text-xs font-semibold text-sky-700 transition hover:text-sky-600"
-                >
-                  {expandedModule === idx ? "Read less" : "Read more"}
-                </button>
-              </article>
+                {tool.imagePath ? (
+                  <Image
+                    src={tool.imagePath}
+                    alt={tool.name}
+                    width={140}
+                    height={80}
+                    className="h-full w-full object-contain p-2"
+                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 28vw, 180px"
+                  />
+                ) : (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                      {tool.name}
+                    </p>
+                    <p className="mt-1 text-[10px] text-slate-400 sm:text-xs">
+                      Add image path
+                    </p>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-2">
+      <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
+        <div className="mx-auto max-w-6xl rounded-3xl border border-slate-200 bg-white px-4 py-6 shadow-sm sm:px-6 sm:py-8">
+          <h3 className="text-center text-xl font-bold text-slate-900 sm:text-3xl">
+            Certifications That Get You Placed!
+          </h3>
+          <div className="mt-6 mb-3">
+            <div
+              className={`grid gap-4 ${
+                certificationItems.length <= 2
+                  ? "mx-auto max-w-4xl md:grid-cols-2"
+                  : "md:grid-cols-3"
+              }`}
+            >
+              {certificationItems.map((certificate, idx) => (
+                <article
+                  key={`${certificate.title}-${idx}`}
+                  className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3"
+                >
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                    {certificate.imagePath ? (
+                      <Image
+                        src={certificate.imagePath}
+                        alt={certificate.title}
+                        width={420}
+                        height={220}
+                        className="h-44 w-full object-contain bg-white p-2 blur-[.9px] sm:h-48 lg:h-52"
+                        sizes="(max-width: 768px) 100vw, 30vw"
+                      />
+                    ) : (
+                      <div className="flex h-40 items-center justify-center bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:h-44">
+                        Add Certificate Image
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="mt-3 text-sm font-semibold text-slate-900 sm:text-base">
+                    {certificate.title}
+                  </h4>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                    {certificate.description}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+          <h2 className="text-center text-medium font-sm text-slate-600 sm:text-xl">
+            Receive an industry-recognized certification along with an internship letter that validates both your technical skills and real-world project experience. This combination strengthens your professional profile, helping you stand out to employers and confidently secure job opportunities.
+          </h2>
+        </div>
+      </section>
+
+      {/* <section className="grid gap-4 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-2">
         <div className="rounded-3xl border border-sky-200 bg-sky-50 p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-            / Criteria /
+            Evaluation Criteria
           </p>
           <h3 className="font-display mt-2 text-xl font-bold text-sky-950">
-            Evaluation Criteria
+            Certification Requirements
           </h3>
           <p className="mt-2 text-sm text-sky-900">{course.criteriaSummary.description}</p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -328,85 +409,52 @@ export default function CourseDetailShowcase({
             href="/evaluation-criteria"
             className="mt-4 inline-flex text-sm font-bold text-sky-800 hover:text-sky-700"
           >
-            Know More →
+            Know more →
           </Link>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            / Learn /
-          </p>
-          <h3 className="font-display mt-2 text-xl font-bold text-slate-900">
-            What You Will Learn
-          </h3>
-          <ul className="mt-3 space-y-2 text-sm text-slate-700">
-            {course.learningOutcomes.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="grid gap-4 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-2">
         <div className="rounded-3xl border border-slate-200 bg-white p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            / Career Prospects /
+            Why This Program Is Different
           </p>
-          <h3 className="font-display mt-2 text-xl font-bold text-slate-900">
-            Complete the course and lead the industry
-          </h3>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {course.careerRoles.map((role, idx) => (
-              <div
-                key={role}
-                className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition duration-300 hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50"
-                onMouseEnter={() => setActiveCareer(idx)}
-                onMouseLeave={() => setActiveCareer(null)}
-              >
-                <p className="flex items-center gap-2">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-xs">
-                    {careerIcons[idx % careerIcons.length]}
-                  </span>
-                  <span>{role}</span>
-                </p>
-                <p
-                  className={`text-xs text-slate-600 transition-all duration-300 ${
-                    activeCareer === idx
-                      ? "mt-1 max-h-14 opacity-100"
-                      : "max-h-0 overflow-hidden opacity-0 group-hover:mt-1 group-hover:max-h-14 group-hover:opacity-100"
-                  }`}
-                >
-                  Role-focused BIM responsibilities with project-ready workflow skills.
-                </p>
-              </div>
-            ))}
+          <div className="mt-4 grid gap-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+              Real project style assignments instead of only demo exercises.
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+              Mentor-led feedback loops for portfolio and interview readiness.
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+              A complete route from skills training to placement support.
+            </div>
           </div>
         </div>
+      </section> */}
 
-        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-sky-900 p-6 text-white">
+      <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
+        <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 px-6 py-10 text-center text-white sm:px-10">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-            / Enrollment Process /
+            Final Step
           </p>
-          <h3 className="font-display mt-2 text-xl font-bold">Your Journey Starts Here</h3>
-          <p className="mt-2 text-sm text-slate-200">
-            Follow a simple enrollment process, choose payment mode, and begin your
-            BIM pathway with structured onboarding.
+          <h2 className="font-display mt-3 text-3xl font-extrabold sm:text-4xl">
+            Start Building Your BIM Career Path
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-200 sm:text-base">
+            Join the next intake, train with industry-aligned modules, and move toward
+            job-ready BIM roles with structured support.
           </p>
-          <p className="mt-4 text-sm font-semibold text-sky-100">
-            Course Fee: INR {courseFeeInr}
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/#courses"
-              className="inline-flex flex-1 items-center justify-center rounded-full border-2 border-white/35 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/15"
-            >
-              All courses
-            </Link>
+          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href={enrollHref}
-              className="inline-flex flex-1 items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-sky-50"
+              className="inline-flex w-full items-center justify-center rounded-full bg-white px-7 py-3 text-sm font-bold text-slate-900 transition hover:bg-sky-50 sm:w-auto"
             >
-              Enroll now
+              Apply / Enroll
+            </Link>
+            <Link
+              href="/contact"
+              className="inline-flex w-full items-center justify-center rounded-full border border-white/40 bg-white/10 px-7 py-3 text-sm font-bold text-white transition hover:bg-white/20 sm:w-auto"
+            >
+              Talk to counselor
             </Link>
           </div>
         </div>
