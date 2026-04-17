@@ -33,11 +33,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
 
   const enrollHref = `/enroll?course=${encodeURIComponent(course.id)}`;
   const courseFeeInr = new Intl.NumberFormat("en-IN").format(course.upfrontInr);
-  const durationHours = course.duration.includes("10")
-    ? "180 hours"
-    : course.duration.includes("8")
-      ? "150 hours"
-      : "120 hours";
+  const durationHours = course.hours;
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
@@ -54,7 +50,6 @@ export default async function CourseDetailPage({ params }: PageProps) {
           course={course}
           enrollHref={enrollHref}
           courseFeeInr={courseFeeInr}
-          durationHours={durationHours}
         />
       </div>
     </main>
