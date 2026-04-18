@@ -161,7 +161,7 @@ export default function LoginPage() {
                 </Link>
               </p>
 
-              <p className="text-center text-xs leading-5 text-slate-500">
+              {/* <p className="text-center text-xs leading-5 text-slate-500">
                 Prefer OTP?{" "}
                 <Link
                   href="/login/otp"
@@ -170,7 +170,7 @@ export default function LoginPage() {
                   Sign in with OTP
                 </Link>
                 .
-              </p>
+              </p> */}
             </form>
           </div>
         </section>

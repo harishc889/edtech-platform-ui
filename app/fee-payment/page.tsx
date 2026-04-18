@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { LegalPageShell } from "@/app/components/legal-page-shell";
 
 export const metadata: Metadata = {
-  title: "Fee Payment | LA Bim Solutions",
-  description: "Fee payment information for LA Bim Solutions services and programs.",
+  title: "Fee Payment | LA Bim Academy",
+  description: "Fee payment information for LA Bim Academy services and programs.",
 };
 
 export default function FeePaymentPage() {

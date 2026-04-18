@@ -3,8 +3,8 @@ import Link from "next/link";
 import { LegalPageShell } from "@/app/components/legal-page-shell";
 
 export const metadata: Metadata = {
-  title: "Sitemap | LA Bim Solutions",
-  description: "Quick sitemap links for LA Bim Solutions website.",
+  title: "Sitemap | LA Bim Academy",
+  description: "Quick sitemap links for LA Bim Academy website.",
 };
 
 const links = [

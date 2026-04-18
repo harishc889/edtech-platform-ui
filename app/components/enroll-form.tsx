@@ -573,7 +573,7 @@ export function EnrollForm({ initialCourseId }: Props) {
               required
             />
             <span>
-              I authorize LA Bim Solutions and its representatives to call, SMS,
+              I authorize LA Bim Academy and its representatives to call, SMS,
               email, or WhatsApp me about products and offers.
             </span>
           </label>
@@ -599,7 +599,7 @@ export function EnrollForm({ initialCourseId }: Props) {
             </span>
           </label>
 
-          <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+          {/* <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
             <input
               type="checkbox"
               checked={consentEvaluation}
@@ -619,7 +619,7 @@ export function EnrollForm({ initialCourseId }: Props) {
               </Link>
               .
             </span>
-          </label>
+          </label> */}
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
             <Link

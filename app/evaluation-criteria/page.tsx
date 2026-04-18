@@ -41,7 +41,7 @@ const evaluationItems = [
 ];
 
 export const metadata: Metadata = {
-  title: "Evaluation Criteria | LA Bim Solutions",
+  title: "Evaluation Criteria | LA Bim Academy",
   description:
     "Admission requirements, evaluation criteria, and passing criteria for enrolled learners.",
 };
