@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Contact Us | LA Bim Solutions",
+  title: "Contact Us | LA Bim Academy",
   description:
-    "Get in touch with LA Bim Solutions for BIM and VDC services.",
+    "Get in touch with LA Bim Academy for BIM and VDC services.",
 };
 
 export default function ContactPage() {

@@ -71,17 +71,47 @@ export default function CourseDetailShowcase({
       imagePath: "",
     }));
   }, [course.certifications]);
+  const courseFaqItems = useMemo(() => {
+    if (course.faqs && course.faqs.length > 0) return course.faqs;
+    return Array.from({ length: 14 }).map((_, idx) => ({
+      q: `FAQ ${idx + 1}`,
+      answerHtml: "Add your FAQ details and description.",
+    }));
+  }, [
+    course.assessments,
+    course.duration,
+    course.eligibility,
+    course.faqs,
+    course.hours,
+    course.language,
+    course.mode,
+    course.modules.length,
+    course.title,
+  ]);
   const stats = useMemo(
     () => [
       { title: "Course Duration", value: `${course.duration} (${course.hours})` },
       { title: "Internship Duration", value: `${course.internshipDuration} (${course.internshipHours})` },
-      { title: "Modules", value: `${course.modules.length}+` },
+      { title: "Modules", value: `${course.modules.length}` },
       { title: "Assessments", value: `${course.assessments}` },
       { title: "Language", value: course.language },
       { title: "Mode", value: course.mode },
 
     ],
     [course.duration, course.hours, course.internshipDuration, course.internshipHours, course.language, course.modules.length, course.careerRoles.length],
+  );
+
+  const seatBookingDisplay = useMemo(
+    () => new Intl.NumberFormat("en-IN").format(course.seatBookingInr),
+    [course.seatBookingInr],
+  );
+  const emiInstallments = useMemo(
+    () =>
+      [3, 6, 9, 12].map((months) => ({
+        months,
+        monthly: Math.round(course.upfrontInr / months),
+      })),
+    [course.upfrontInr],
   );
 
   return (
@@ -91,7 +121,7 @@ export default function CourseDetailShowcase({
           className="absolute inset-0 bg-cover bg-center"
           aria-hidden
           style={{
-            backgroundImage: "url('/images/courses/course-hero-reference.png')",
+            backgroundImage: `url(${course.courseDetailCoverImage})`,
           }}
         />
         <div
@@ -117,7 +147,7 @@ export default function CourseDetailShowcase({
             </p> */}
             <div className="mt-8 flex flex-wrap gap-3 sm:flex-nowrap">
               <Link
-                href={enrollHref}
+                href="/contact"
                 className="h-8 inline-flex items-center justify-center rounded-full border border-slate-900/20 bg-white px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-sky-50"
               >
                 Request a callback
@@ -199,11 +229,10 @@ export default function CourseDetailShowcase({
               return (
                 <article
                   key={module.title}
-                  className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${
-                    expandedModule === idx
+                  className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${expandedModule === idx
                       ? "border-sky-300 shadow-sky-100"
                       : "border-slate-200 hover:border-slate-300"
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -218,16 +247,14 @@ export default function CourseDetailShowcase({
                       onClick={() =>
                         setExpandedModule((current) => (current === idx ? -1 : idx))
                       }
-                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        expandedModule === idx
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${expandedModule === idx
                           ? "bg-sky-100 text-sky-800"
                           : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
+                        }`}
                     >
                       <span
-                        className={`text-sm leading-none transition-transform ${
-                          expandedModule === idx ? "rotate-180" : ""
-                        }`}
+                        className={`text-sm leading-none transition-transform ${expandedModule === idx ? "rotate-180" : ""
+                          }`}
                       >
                         ▾
                       </span>
@@ -236,18 +263,17 @@ export default function CourseDetailShowcase({
                   <h3 className="mt-2 text-lg font-bold text-slate-900">{module.title}</h3>
                   <div
                     id={`module-panel-${idx}`}
-                    className={`overflow-hidden transition-all duration-300 ${
-                      expandedModule === idx
+                    className={`overflow-hidden transition-all duration-300 ${expandedModule === idx
                         ? "mt-3 max-h-[28rem] opacity-100"
                         : "max-h-0 opacity-0"
-                    }`}
+                      }`}
                   >
-                  <div
-                    className="text-sm leading-relaxed text-slate-700 [&_ul]:mt-2 [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:list-disc [&_li]:marker:text-sky-600"
-                    dangerouslySetInnerHTML={{
-                      __html: toModuleDescriptionHtml(module.desc),
-                    }}
-                  />
+                    <div
+                      className="text-sm leading-relaxed text-slate-700 [&_ul]:mt-2 [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:list-disc [&_li]:marker:text-sky-600"
+                      dangerouslySetInnerHTML={{
+                        __html: toModuleDescriptionHtml(module.desc),
+                      }}
+                    />
                   </div>
                 </article>
               );
@@ -302,7 +328,7 @@ export default function CourseDetailShowcase({
       <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
         <div className="mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-5 sm:p-8">
           <h3 className="text-center text-lg font-bold text-white sm:text-2xl">
-          Get Ready to BIM: Unlock 5 Powerful Software Tools to Elevate Your Career
+            Get Ready to BIM: Unlock 5 Powerful Software Tools to Elevate Your Career
           </h3>
           {/* <p className="mt-2 text-center text-xs text-slate-300 sm:text-sm">
             Replace each placeholder with your own tool icon/photo.
@@ -345,11 +371,10 @@ export default function CourseDetailShowcase({
           </h3>
           <div className="mt-6 mb-3">
             <div
-              className={`grid gap-4 ${
-                certificationItems.length <= 2
+              className={`grid gap-4 ${certificationItems.length <= 2
                   ? "mx-auto max-w-4xl md:grid-cols-2"
                   : "md:grid-cols-3"
-              }`}
+                }`}
             >
               {certificationItems.map((certificate, idx) => (
                 <article
@@ -385,6 +410,35 @@ export default function CourseDetailShowcase({
           <h2 className="text-center text-medium font-sm text-slate-600 sm:text-xl">
             Receive an industry-recognized certification along with an internship letter that validates both your technical skills and real-world project experience. This combination strengthens your professional profile, helping you stand out to employers and confidently secure job opportunities.
           </h2>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
+        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-slate-200/80 shadow-md">
+          <div
+            className="absolute inset-0 bg-cover bg-[center_right] sm:bg-center"
+            aria-hidden
+            style={{
+              backgroundImage: "url('/images/placement-assistance-bg.png')",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/95 via-white/88 to-white/25 md:bg-gradient-to-r md:from-white/95 md:via-white/85 md:to-transparent"
+            aria-hidden
+          />
+          <div className="relative z-10 flex min-h-[min(22rem,70vh)] flex-col justify-center px-5 py-10 sm:px-8 sm:py-12 md:min-h-[24rem] md:max-w-xl md:py-14 lg:max-w-[26rem] lg:px-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-800">
+              Career support
+            </p>
+            <h2 className="font-display mt-2 text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
+              Lifetime Placement Assistance
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-slate-700 sm:text-base">
+              We provide continuous career support to our students, including job referrals,
+              interview preparation, and industry connections—ensuring opportunities even after
+              course completion.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -432,10 +486,99 @@ export default function CourseDetailShowcase({
       </section> */}
 
       <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
+
         <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 px-6 py-10 text-center text-white sm:px-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-            Final Step
+
+          <h2 className="font-display mt-3 text-3xl font-extrabold sm:text-4xl">
+            FINAL STEP
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-lg font-bold leading-relaxed text-slate-200 sm:text-base">
+            Your {course.title} Journey Starts Here!
           </p>
+          <div className="mx-auto mt-6 max-w-4xl overflow-hidden rounded-[1.75rem] shadow-[0_12px_40px_-8px_rgba(15,23,42,0.35)] md:mt-8">
+            <div className="grid md:grid-cols-2">
+              <div className="flex flex-col justify-between bg-[#0c1e3d] px-5 py-6 text-white sm:px-7 sm:py-8">
+                <div>
+                  <div className="rounded-t-xl border border-sky-400/35 bg-[#081428]/60 px-4 py-3 text-center sm:px-5 sm:py-4">
+                    <p className="text-xs text-sky-100/95 sm:text-sm">Book your seat with</p>
+                    <p className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">
+                      ₹{seatBookingDisplay}
+                    </p>
+                  </div>
+                  <div className="-mt-px rounded-b-xl border border-t-0 border-sky-400/35 bg-[#081428]/60 px-4 py-3 text-center sm:px-5 sm:py-4">
+                    <p className="text-xs text-sky-100/95 sm:text-sm">Total Fee</p>
+                    <p className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">
+                      ₹{courseFeeInr}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6 flex flex-col items-center gap-3">
+                  <Link
+                    href={enrollHref}
+                    className="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-sky-500 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-sky-400"
+                  >
+                    Register Here
+                  </Link>
+                  <p className="max-w-sm text-center text-[10px] leading-snug text-sky-200/90 sm:text-xs">
+                    Follow an easy-to-navigate enrollment process using the provided
+                    Enrollment Form
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col bg-[#163a6e] px-5 py-6 text-white sm:px-7 sm:py-8">
+                <h4 className="text-base font-bold sm:text-lg">Accepted Payment Methods</h4>
+                <p className="mt-2 text-xs leading-relaxed text-sky-100 sm:text-sm">
+                  Information on various payment methods is available for your convenience
+                  and seamless registration.
+                </p>
+                <span className="mt-3 inline-flex self-start rounded-full bg-sky-300 px-3 py-1 text-[10px] font-semibold text-[#0c1e3d] sm:text-xs">
+                  No Cost EMI Available
+                </span>
+                <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/25 bg-white/15">
+                  {emiInstallments.map((row) => (
+                    <div
+                      key={row.months}
+                      className="bg-[#163a6e] px-1 py-3 text-center text-[10px] leading-tight sm:px-3 sm:py-3.5 sm:text-xs"
+                    >
+                      <span className="font-semibold">{row.months} Months</span>
+                      <span className="mx-0.5 text-white/50">—</span>
+                      <span className="block sm:inline">
+                        ₹{new Intl.NumberFormat("en-IN").format(row.monthly)} / Monthly
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 rounded-xl border border-white/30 bg-white p-2 sm:p-3">
+                  <div className="grid grid-cols-3 gap-px bg-slate-200/80">
+                    {[
+                      { label: "VISA", src: "/images/payment/visa.png" },
+                      { label: "UPI", src: "/images/payment/upi.png" },
+                      { label: "RuPay", src: "/images/payment/rupay.png" },
+                      { label: "MasterCard", src: "/images/payment/mastercard.png" },
+                      { label: "Paytm", src: "/images/payment/paytm.jpg" },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex min-h-[2.75rem] items-center justify-center bg-white px-2 sm:min-h-[3rem]"
+                      >
+                        <Image
+                          src={item.src}
+                          alt={item.label}
+                          width={110}
+                          height={34}
+                          className="h-6 w-auto object-contain sm:h-7"
+                          sizes="110px"
+                        />
+                      </div>
+                    ))}
+                    <div className="flex min-h-[2.75rem] items-center justify-center bg-white sm:min-h-[3rem]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          
           <h2 className="font-display mt-3 text-3xl font-extrabold sm:text-4xl">
             Start Building Your BIM Career Path
           </h2>
@@ -458,6 +601,73 @@ export default function CourseDetailShowcase({
             </Link>
           </div>
         </div>
+      </section>
+
+      <section
+        className="border-t border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-sky-50/20 px-6 py-16 sm:px-10 sm:py-20"
+        aria-labelledby="course-faq-heading"
+      >
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-800/90">FAQs</p>
+          <h2
+            id="course-faq-heading"
+            className="font-display mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl"
+          >
+            Deconstructing{" "}
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+              your doubts
+            </span>
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
+            Answers to common questions about {course.title}, enrollment flow, and outcomes.
+          </p>
+        </div>
+
+        <div className="mx-auto mt-12 max-w-3xl space-y-3 sm:mt-14 sm:space-y-4">
+          {courseFaqItems.map((item) => (
+            <details
+              key={item.q}
+              className="group rounded-2xl border border-slate-200/90 bg-white/90 shadow-sm ring-1 ring-slate-100/80 transition-[border-color,box-shadow,background-color] duration-200 open:border-slate-700/90 open:bg-gradient-to-br open:from-slate-700 open:via-slate-700 open:to-slate-600 open:shadow-xl open:ring-slate-800/60"
+            >
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-left sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1 font-display text-base font-bold leading-snug text-slate-900 group-open:text-white sm:text-lg">
+                  {item.q}
+                </span>
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200/90 bg-slate-50 text-slate-600 transition duration-200 group-open:border-white/20 group-open:bg-white/10 group-open:text-white"
+                  aria-hidden
+                >
+                  <svg
+                    className="h-5 w-5 shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="border-t border-slate-100/90 px-4 pb-5 pt-0 group-open:border-white/10 sm:px-5 sm:pb-6">
+                <div
+                  className="home-faq-html pt-4 text-[15px] sm:text-base"
+                  dangerouslySetInnerHTML={{ __html: item.answerHtml }}
+                />
+              </div>
+            </details>
+          ))}
+        </div>
+
+        <p className="mx-auto mt-10 max-w-xl text-center text-sm text-slate-500">
+          Still unsure?{" "}
+          <Link
+            href="/contact"
+            className="font-semibold text-cyan-700 underline-offset-2 hover:text-cyan-800 hover:underline"
+          >
+            Contact us
+          </Link>{" "}
+          and we’ll guide you to the right course.
+        </p>
       </section>
     </article>
   );

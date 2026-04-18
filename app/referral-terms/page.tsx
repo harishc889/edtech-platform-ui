@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPageShell } from "@/app/components/legal-page-shell";
 
 export const metadata: Metadata = {
-  title: "Referral Program Terms | LA Bim Solutions",
+  title: "Referral Program Terms | LA Bim Academy",
   description: "Terms and conditions for the referral program.",
 };
 

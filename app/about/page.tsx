@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
+import BackNavLink from "@/app/components/back-nav-link";
 
 export const metadata: Metadata = {
   title: "About Us | LA Bim Academy",
@@ -118,12 +118,7 @@ export default function AboutPage() {
       <section className="px-4 pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-16">
         <div className="mx-auto w-full max-w-6xl">
           <nav className="mb-8 text-sm">
-            <Link
-              href="/"
-              className="font-semibold text-cyan-700 transition hover:text-cyan-600"
-            >
-              ← Home
-            </Link>
+            <BackNavLink className="font-semibold text-cyan-700 transition hover:text-cyan-600" />
           </nav>
         </div>
       </section>

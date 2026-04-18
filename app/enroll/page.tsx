@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EnrollForm } from "../components/enroll-form";
+import BackNavLink from "../components/back-nav-link";
 
 export const metadata: Metadata = {
   title: "Enroll | EdTech Academy",
@@ -23,7 +24,8 @@ export default async function EnrollPage({ searchParams }: PageProps) {
             href="/"
             className="font-semibold text-cyan-700 transition hover:text-cyan-600"
           >
-            ← Home
+           <BackNavLink className="font-semibold text-cyan-700 transition hover:text-cyan-600" />
+
           </Link>
         </nav>
         <EnrollForm initialCourseId={course} />
