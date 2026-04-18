@@ -7,13 +7,13 @@ type Pillar = {
   title: string;
   description: string;
   icon: ReactNode;
-  /** Root-relative image under `public/`, e.g. `/images/why-learn/card-01.png` */
+  /** Root-relative image under `public/`, e.g. `/images/why-learn/card-01.webp` */
   coverImage?: string;
 };
 
 const pillars: Pillar[] = [
   {
-    coverImage: "/images/why-learn/card-01.png",
+    coverImage: "/images/why-learn/card-01.webp",
     title: "Industry-Focused Training",
     description:
       "At LA Bim Academy, our courses are designed around real-world industry needs. You don’t just learn software - you learn how BIM is used on live construction and engineering projects.",
@@ -28,7 +28,7 @@ const pillars: Pillar[] = [
     ),
   },
   {
-    coverImage: "/images/why-learn/card-02.jpg",
+    coverImage: "/images/why-learn/card-02.webp",
     title: "Experienced Trainers",
     description:
       "Learn from professionals who have hands-on experience in BIM projects across multiple disciplines like Architecture, Structure, and MEP. This ensures practical insights, not just theoretical knowledge.",
@@ -40,7 +40,7 @@ const pillars: Pillar[] = [
     ),
   },
   {
-    coverImage: "/images/why-learn/card-03.jpg",
+    coverImage: "/images/why-learn/card-03.webp",
     title: "Job-Oriented Curriculum",
     description:
       "Our training programs are structured to make you job-ready. From basic concepts to advanced workflows, every module is aligned with current market demands.",
@@ -55,7 +55,7 @@ const pillars: Pillar[] = [
     ),
   },
   {
-    coverImage: "/images/why-learn/card-04.jpg",
+    coverImage: "/images/why-learn/card-04.webp",
     title: "Hands-On Practical Learning",
     description:
       "We believe in learning by doing. Students work on real-time projects, models, and case studies using tools like Revit, Navisworks, and other BIM software.",
@@ -66,7 +66,7 @@ const pillars: Pillar[] = [
     ),
   },
   {
-    coverImage: "/images/why-learn/card-05.jpg",
+    coverImage: "/images/why-learn/card-05.webp",
     title: "Multi-Discipline BIM Exposure",
     description:
       "Get exposure to Architectural, Structural, and MEP modeling, coordination, and clash detection—making you a complete BIM professional.",
@@ -77,7 +77,7 @@ const pillars: Pillar[] = [
     ),
   },
   {
-    coverImage: "/images/why-learn/card-06.jpg",
+    coverImage: "/images/why-learn/card-06.webp",
     title: "Personalized Support",
     description:
       "We provide individual attention, doubt-clearing sessions, and mentorship to help every student progress confidently.",
@@ -88,7 +88,7 @@ const pillars: Pillar[] = [
     ),
   },
   {
-    coverImage: "/images/why-learn/card-07.jpg",
+    coverImage: "/images/why-learn/card-07.webp",
     title: "Certification & Career Support",
     description:
       "Receive industry-recognized certification upon course completion along with resume guidance, interview preparation, and placement assistance.",
@@ -103,7 +103,7 @@ const pillars: Pillar[] = [
     ),
   },
   {
-    coverImage: "/images/why-learn/card-08.jpg",
+    coverImage: "/images/why-learn/card-08.webp",
     title: "Strong Learning Community",
     description:
       "Join a network of learners and professionals where you can collaborate, share knowledge, and grow in your BIM career.",
@@ -225,11 +225,11 @@ export default function WhyLearnFromUs() {
         >
           <div className="relative">
             <div
-              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-slate-50 via-slate-50/80 to-transparent sm:w-16"
+              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-slate-50/55 via-slate-50/20 to-transparent sm:w-12"
               aria-hidden
             />
             <div
-              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-sky-50/80 via-white/70 to-transparent sm:w-16"
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-sky-50/55 via-white/20 to-transparent sm:w-12"
               aria-hidden
             />
             <button
@@ -268,7 +268,12 @@ export default function WhyLearnFromUs() {
                         src={cover}
                         alt=""
                         fill
-                        sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 24vw"
+                        sizes="(max-width: 640px) 88vw, (max-width: 1024px) 44vw, 22vw"
+                        quality={70}
+                        priority={i === 0}
+                        loading={i === 0 ? "eager" : "lazy"}
+                        fetchPriority={i === 0 ? "high" : "auto"}
+                        decoding="async"
                         className="object-cover object-center transition duration-700 ease-out group-hover:scale-[1.03]"
                       />
                     ) : (

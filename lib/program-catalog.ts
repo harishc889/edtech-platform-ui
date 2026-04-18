@@ -67,8 +67,8 @@ export const PROGRAM_CATALOG: Program[] = [
     mode: "Online",
     assessments: "3",
     eligibility: "Bachelor’s in Architecture",
-    cardCoverImage: "/images/courses/bim-arch.png",
-    courseDetailCoverImage: "/images/courses-details/bim-arch.png",
+    cardCoverImage: "/images/courses/bim-arch.webp",
+    courseDetailCoverImage: "/images/courses-details/bim-arch.webp",
     // level: "Advanced",
     // description:
     //   "Deepen BIM coordination, clash management, and delivery standards used on international projects. You will work through structured modules covering model authoring, collaboration workflows, ISO-style information management, and leadership skills for multi-discipline teams.",
@@ -207,12 +207,12 @@ export const PROGRAM_CATALOG: Program[] = [
       {
         title: "Work Experience Certificate",
         description: "More than a certificate—it’s your gateway to BIM jobs.”",
-        imagePath: "/images/certificates/certificateOfCompletion.png",
+        imagePath: "/images/certificates/certificateOfCompletion.webp",
       },
       {
         title: "Internship Letter",
         description: "This isn’t just a letter; it’s your BIM job offer waiting to happen.",
-        imagePath: "/images/certificates/internshipLetter.png",
+        imagePath: "/images/certificates/internshipLetter.webp",
       },
       // {
       //   title: "ISO 19650 Certified BIM Professional",
@@ -286,8 +286,8 @@ export const PROGRAM_CATALOG: Program[] = [
     mode: "Online",
     assessments: "3",
     eligibility: "Bachelor’s in Civil, Master's in Structure",
-    cardCoverImage: "/images/courses/bim-str.jpg",
-    courseDetailCoverImage: "/images/courses-details/bim-str.png",
+    cardCoverImage: "/images/courses/bim-str.webp",
+    courseDetailCoverImage: "/images/courses-details/bim-str.webp",
     // level: "Intermediate",
     // description:
     //   "Focus on architectural modeling, documentation sets, design options, and coordination with structure and MEP. Ideal for architects moving from CAD-centric workflows to model-based delivery.",
@@ -429,12 +429,12 @@ export const PROGRAM_CATALOG: Program[] = [
       {
         title: "Work Experience Certificate",
         description: "More than a certificate—it’s your gateway to BIM jobs.”",
-        imagePath: "/images/certificates/certificateOfCompletion.png",
+        imagePath: "/images/certificates/certificateOfCompletion.webp",
       },
       {
         title: "Internship Letter",
         description: "This isn’t just a letter; it’s your BIM job offer waiting to happen.",
-        imagePath: "/images/certificates/internshipLetter.png",
+        imagePath: "/images/certificates/internshipLetter.webp",
       },
       // {
       //   title: "ISO 19650 Certified BIM Professional",
@@ -513,8 +513,8 @@ export const PROGRAM_CATALOG: Program[] = [
     mode: "Online",
     assessments: "3",
     eligibility: "Bachelor’s in Mechanical or Electrical",
-    cardCoverImage: "/images/courses/bim-mep.png",
-    courseDetailCoverImage: "/images/courses-details/bim-mep.jpg",
+    cardCoverImage: "/images/courses/bim-mep.webp",
+    courseDetailCoverImage: "/images/courses-details/bim-mep.webp",
     // level: "Intermediate",
     // description:
     //   "Structural and civil BIM workflows: templates, rebar and precast concepts, quantities, and coordination with architecture and MEP in a federated environment.",
@@ -665,12 +665,12 @@ export const PROGRAM_CATALOG: Program[] = [
       {
         title: "Work Experience Certificate",
         description: "More than a certificate—it’s your gateway to BIM jobs.”",
-        imagePath: "/images/certificates/certificateOfCompletion.png",
+        imagePath: "/images/certificates/certificateOfCompletion.webp",
       },
       {
         title: "Internship Letter",
         description: "This isn’t just a letter; it’s your BIM job offer waiting to happen.",
-        imagePath: "/images/certificates/internshipLetter.png",
+        imagePath: "/images/certificates/internshipLetter.webp",
       },
       // {
       //   title: "ISO 19650 Certified BIM Professional",
@@ -750,8 +750,8 @@ export const PROGRAM_CATALOG: Program[] = [
     assessments: "3",
     eligibility:
       "Bachelor’s in civil",
-    cardCoverImage: "/images/courses/bim-civil.png",
-    courseDetailCoverImage: "/images/courses-details/bim-civil.jpg",
+    cardCoverImage: "/images/courses/bim-civil.webp",
+    courseDetailCoverImage: "/images/courses-details/bim-civil.webp",
     // level: "Beginner–intermediate",
     // description:
     //   "A complete pathway from fundamentals to coordination: modeling, views, sheets, collaboration in the cloud, and basic clash workflows—designed to make you job-ready faster.",
@@ -893,12 +893,12 @@ export const PROGRAM_CATALOG: Program[] = [
       {
         title: "Work Experience Certificate",
         description: "More than a certificate—it’s your gateway to BIM jobs.”",
-        imagePath: "/images/certificates/certificateOfCompletion.png",
+        imagePath: "/images/certificates/certificateOfCompletion.webp",
       },
       {
         title: "Internship Letter",
         description: "This isn’t just a letter; it’s your BIM job offer waiting to happen.",
-        imagePath: "/images/certificates/internshipLetter.png",
+        imagePath: "/images/certificates/internshipLetter.webp",
       },
       // {
       //   title: "ISO 19650 Certified BIM Professional",
@@ -974,8 +974,8 @@ export const PROGRAM_CATALOG: Program[] = [
     assessments: "5",
     eligibility:
       "Bachelor’s in civil, Architecture,Mechanical or Electrical",
-    cardCoverImage: "/images/courses/bim-complete.jpg",
-    courseDetailCoverImage: "/images/courses-details/bim-complete.jpg",
+    cardCoverImage: "/images/courses/bim-complete.webp",
+    courseDetailCoverImage: "/images/courses-details/bim-complete.webp",
   
     // level: "Beginner–intermediate",
     // description:
@@ -1203,12 +1203,12 @@ export const PROGRAM_CATALOG: Program[] = [
       {
         title: "Work Experience Certificate",
         description: "More than a certificate—it’s your gateway to BIM jobs.”",
-        imagePath: "/images/certificates/certificateOfCompletion.png",
+        imagePath: "/images/certificates/certificateOfCompletion.webp",
       },
       {
         title: "Internship Letter",
         description: "This isn’t just a letter; it’s your BIM job offer waiting to happen.",
-        imagePath: "/images/certificates/internshipLetter.png",
+        imagePath: "/images/certificates/internshipLetter.webp",
       },
       // {
       //   title: "ISO 19650 Certified BIM Professional",

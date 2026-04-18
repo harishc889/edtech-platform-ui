@@ -78,10 +78,11 @@ export default function AboutPage() {
     <>
       <section className="relative min-h-[17rem] overflow-hidden sm:min-h-[19rem] lg:min-h-[24rem]">
         <Image
-          src="/images/about-hero-bg.png"
+          src="/images/about-hero-bg.webp"
           alt=""
           fill
           priority
+          quality={72}
           className="object-cover object-[50%_center] sm:object-[45%_center]"
           sizes="100vw"
         />

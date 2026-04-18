@@ -78,6 +78,8 @@ export default function FloatingEnquiryCta() {
             src="/images/ai-assistant-avatar.png"
             alt="AI assistant avatar"
             fill
+            quality={65}
+            loading="lazy"
             className="object-cover object-center"
             sizes="48px"
           />

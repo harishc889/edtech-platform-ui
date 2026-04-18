@@ -345,6 +345,8 @@ export default function CourseDetailShowcase({
                     alt={tool.name}
                     width={140}
                     height={80}
+                    quality={60}
+                    loading="lazy"
                     className="h-full w-full object-contain p-2"
                     sizes="(max-width: 640px) 45vw, (max-width: 1024px) 28vw, 180px"
                   />
@@ -388,6 +390,8 @@ export default function CourseDetailShowcase({
                         alt={certificate.title}
                         width={420}
                         height={220}
+                        quality={68}
+                        loading="lazy"
                         className="h-44 w-full object-contain bg-white p-2 blur-[.9px] sm:h-48 lg:h-52"
                         sizes="(max-width: 768px) 100vw, 30vw"
                       />
@@ -419,7 +423,7 @@ export default function CourseDetailShowcase({
             className="absolute inset-0 bg-cover bg-[center_right] sm:bg-center"
             aria-hidden
             style={{
-              backgroundImage: "url('/images/placement-assistance-bg.png')",
+              backgroundImage: "url('/images/placement-assistance-bg.webp')",
             }}
           />
           <div
@@ -566,6 +570,8 @@ export default function CourseDetailShowcase({
                           alt={item.label}
                           width={110}
                           height={34}
+                          quality={60}
+                          loading="lazy"
                           className="h-6 w-auto object-contain sm:h-7"
                           sizes="110px"
                         />

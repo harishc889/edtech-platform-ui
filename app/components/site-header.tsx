@@ -28,6 +28,10 @@ export default function SiteHeader() {
   const { showToast } = useToast();
   const desktopCoursesRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  /** First full auth resolution (initial page load). */
+  const initialAuthCheckDone = useRef(false);
+  /** Previous route — used to detect leaving /login or /register. */
+  const prevPathnameRef = useRef<string | null>(null);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -62,19 +66,35 @@ export default function SiteHeader() {
   useEffect(() => {
     let active = true;
     async function loadCurrentUser() {
+      const previous = prevPathnameRef.current;
+      const wasOnAuthRoute =
+        previous !== null &&
+        (previous.startsWith("/login") || previous.startsWith("/register"));
+
       const isAuthPage =
         pathname.startsWith("/login") || pathname.startsWith("/register");
+
+      prevPathnameRef.current = pathname;
+
       if (isAuthPage) {
         setCurrentUser(null);
         setCheckingAuth(false);
+        initialAuthCheckDone.current = true;
         return;
       }
 
-      setCheckingAuth(true);
+      // Show skeleton only on first paint or when leaving auth screens (user was cleared there).
+      // On other navigations, keep the last Login / profile UI until this fetch finishes — avoids flicker.
+      const comingFromAuthRoute = wasOnAuthRoute;
+      if (!initialAuthCheckDone.current || comingFromAuthRoute) {
+        setCheckingAuth(true);
+      }
+
       const response = await fetchCurrentUser();
       if (!active) return;
       setCurrentUser(response.ok ? response.data ?? null : null);
       setCheckingAuth(false);
+      initialAuthCheckDone.current = true;
     }
     void loadCurrentUser();
     return () => {
@@ -151,6 +171,8 @@ export default function SiteHeader() {
               src="/images/la-bim-academy-logo.png"
               alt=""
               fill
+              quality={70}
+              loading="eager"
               className="object-contain object-center p-0.5"
               sizes="(max-width: 640px) 36px, 44px"
             />
