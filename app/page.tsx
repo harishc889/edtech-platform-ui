@@ -11,10 +11,11 @@ export default function Home() {
       <section className="relative min-h-[28rem] overflow-hidden bg-slate-950 px-4 pb-20 pt-12 text-white sm:min-h-[32rem] sm:px-6 sm:pb-28 sm:pt-16 lg:min-h-[36rem] lg:px-8 lg:pb-32 lg:pt-20">
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <Image
-            src="/images/hero-home.png"
+            src="/images/hero-home.webp"
             alt="Professional learning: focused study with city and technology motifs"
             fill
             priority
+            quality={72}
             className="object-cover object-[75%_center] sm:object-[70%_center] lg:object-[65%_center]"
             sizes="100vw"
           />
@@ -54,9 +55,11 @@ export default function Home() {
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div className="relative mx-auto max-w-7xl min-h-[19rem] overflow-hidden rounded-3xl ring-1 ring-slate-200/80 sm:min-h-[22rem] lg:min-h-[26rem]">
           <Image
-            src="/images/ready-to-enroll-bg.png"
+            src="/images/ready-to-enroll-bg.webp"
             alt=""
             fill
+            quality={70}
+            loading="lazy"
             className="object-cover object-[82%_center] sm:object-[78%_center] md:object-[72%_center] lg:object-[68%_center]"
             sizes="(max-width: 768px) 100vw, 1280px"
           />

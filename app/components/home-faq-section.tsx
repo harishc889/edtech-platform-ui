@@ -70,9 +70,7 @@ const faqs: FaqItem[] = [
   },
   {
     q: "Are online classes available?",
-    answerHtml: `
-<p>Yes, we offer online classes with flexible timings for students and working professionals./p>
-`.trim(),
+    answerHtml: `<p>Yes, we offer online classes with flexible timings for students and working professionals.</p>`.trim(),
   },
   {
     q: "What makes LA BIM Academy different from others?",
