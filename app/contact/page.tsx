@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BackNavLink from "../components/back-nav-link";
 
 export const metadata: Metadata = {
   title: "Contact Us | LA Bim Academy",
@@ -11,14 +12,9 @@ export default function ContactPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
       <div className="mx-auto w-full max-w-7xl">
-        <nav className="mb-8 text-sm">
-          <Link
-            href="/"
-            className="font-semibold text-cyan-700 transition hover:text-cyan-600"
-          >
-            ← Home
-          </Link>
-        </nav>
+      <nav className="mb-8 text-sm">
+            <BackNavLink className="font-semibold text-cyan-700 transition hover:text-cyan-600" />
+      </nav>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
           <section className="rounded-3xl border border-slate-200/80 bg-white p-7 shadow-lg shadow-slate-200/40 sm:p-9">
