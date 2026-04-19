@@ -48,6 +48,10 @@ export type Program = {
   };
   upfrontInr: number;
   seatBookingInr: number;
+  /** ASP.NET `courseId` for `POST /api/Payment/create-order` — set from your API. */
+  apiCourseId: number;
+  /** Default `batchId` until a batch picker exists. */
+  defaultBatchId: number;
 };
 
 /**
@@ -273,6 +277,8 @@ export const PROGRAM_CATALOG: Program[] = [
     },
     upfrontInr: 39999,
     seatBookingInr: 5000,
+    apiCourseId: 1,
+    defaultBatchId: 1,
   },
   {
     id: "BIM-Structure",
@@ -500,6 +506,8 @@ export const PROGRAM_CATALOG: Program[] = [
     },
     upfrontInr: 39999,
     seatBookingInr: 5000,
+    apiCourseId: 2,
+    defaultBatchId: 1,
   },
   {
     id: "BIM-MEP",
@@ -736,6 +744,8 @@ export const PROGRAM_CATALOG: Program[] = [
     },
     upfrontInr: 39999,
     seatBookingInr: 5000,
+    apiCourseId: 3,
+    defaultBatchId: 1,
   },
   {
     id: "BIM-Civil",
@@ -960,6 +970,8 @@ export const PROGRAM_CATALOG: Program[] = [
     },
     upfrontInr: 39999,
     seatBookingInr: 5000,
+    apiCourseId: 4,
+    defaultBatchId: 1,
   },
   {
     id: "BIM-Complete",
@@ -1301,6 +1313,8 @@ export const PROGRAM_CATALOG: Program[] = [
     },
     upfrontInr: 49000,
     seatBookingInr: 5000,
+    apiCourseId: 5,
+    defaultBatchId: 1,
   },
 ];
 

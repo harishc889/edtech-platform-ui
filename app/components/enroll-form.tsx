@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Script from "next/script";
 import { useEffect, useMemo, useState } from "react";
 import {
   authSelectClass,
@@ -11,6 +12,10 @@ import {
   getProgramById,
   type PaymentOption,
 } from "@/lib/program-catalog";
+import {
+  RAZORPAY_CHECKOUT_SCRIPT,
+  runRazorpayPaymentFlow,
+} from "@/lib/razorpay-checkout-flow";
 
 const ENROLLMENT_TERMS = [
   "Available seats are limited and filled on a first-come, first-served basis.",
@@ -68,6 +73,8 @@ export function EnrollForm({ initialCourseId }: Props) {
   const [termsOpen, setTermsOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const program = getProgramById(courseId);
 
@@ -148,7 +155,7 @@ export function EnrollForm({ initialCourseId }: Props) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       nextErrors.email = "please enter valid email";
     }
-    if (!designation.trim()) nextErrors.designation = "Designation is required.";
+    // Designation field is optional / hidden in the current layout — do not block submit.
     if (!courseId.trim()) nextErrors.course = "Course is required.";
     if (!country.trim()) nextErrors.country = "Country is required.";
 
@@ -156,18 +163,40 @@ export function EnrollForm({ initialCourseId }: Props) {
     return Object.keys(nextErrors).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validateForm()) return;
-    if (
-      !program ||
-      !selectedPayment ||
-      !consentMarketing ||
-      !consentTerms ||
-      !consentEvaluation
-    ) {
+    if (!program || !selectedPayment || !consentMarketing || !consentTerms) {
       return;
     }
+
+    setPaymentError(null);
+
+    if (paymentGateway === "razorpay") {
+      setPaymentBusy(true);
+      try {
+        const result = await runRazorpayPaymentFlow({
+          courseId: program.apiCourseId,
+          batchId: program.defaultBatchId,
+        });
+        if (result.ok) {
+          setSubmitted(true);
+        } else {
+          setPaymentError(result.message);
+        }
+      } finally {
+        setPaymentBusy(false);
+      }
+      return;
+    }
+
+    if (paymentGateway === "stripe") {
+      setPaymentError(
+        "Stripe checkout is not connected yet. Please choose Razorpay or contact support.",
+      );
+      return;
+    }
+
     setSubmitted(true);
   }
 
@@ -184,6 +213,7 @@ export function EnrollForm({ initialCourseId }: Props) {
 
   return (
     <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-lg sm:p-8 lg:p-10">
+      <Script src={RAZORPAY_CHECKOUT_SCRIPT} strategy="lazyOnload" />
       {submitted ? (
         <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-5 py-8 text-center">
           <p className="font-display text-lg font-bold text-cyan-950">
@@ -307,7 +337,7 @@ export function EnrollForm({ initialCourseId }: Props) {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block">
+            {/* <label className="block">
               <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Designation *
               </span>
@@ -325,8 +355,8 @@ export function EnrollForm({ initialCourseId }: Props) {
               {errors.designation ? (
                 <p className="mt-1 text-xs text-red-600">{errors.designation}</p>
               ) : null}
-            </label>
-            <label className="block">
+            </label> */}
+            {/* <label className="block">
               <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Verify Referral Code
               </span>
@@ -337,7 +367,7 @@ export function EnrollForm({ initialCourseId }: Props) {
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none ring-cyan-500/30 focus:border-cyan-500 focus:ring-2"
                 placeholder="Optional referral code"
               />
-            </label>
+            </label> */}
           </div>
 
           <div>
@@ -540,7 +570,7 @@ export function EnrollForm({ initialCourseId }: Props) {
               </label>
             </div>
 
-            <label className="mt-4 block">
+            {/* <label className="mt-4 block">
               <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Other Payment Amount
               </span>
@@ -552,7 +582,7 @@ export function EnrollForm({ initialCourseId }: Props) {
                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-cyan-500/30 focus:border-cyan-500 focus:ring-2"
                 placeholder="Enter custom amount if needed"
               />
-            </label>
+            </label> */}
 
             {selectedPayment ? (
               <p className="mt-3 text-xs text-slate-500">
@@ -621,6 +651,12 @@ export function EnrollForm({ initialCourseId }: Props) {
             </span>
           </label> */}
 
+          {paymentError ? (
+            <p className="text-sm text-red-600" role="alert">
+              {paymentError}
+            </p>
+          ) : null}
+
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
             <Link
               href="/"
@@ -630,10 +666,14 @@ export function EnrollForm({ initialCourseId }: Props) {
             </Link>
             <button
               type="submit"
-              disabled={!program || !selectedPayment}
+              disabled={!program || !selectedPayment || paymentBusy}
               className="order-1 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:order-2"
             >
-              Submit
+              {paymentBusy
+                ? "Processing payment…"
+                : paymentGateway === "razorpay"
+                  ? "Submit & pay with Razorpay"
+                  : "Submit"}
             </button>
           </div>
         </form>

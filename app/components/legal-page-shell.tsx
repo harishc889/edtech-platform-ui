@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BackNavLink from "./back-nav-link";
 
 type LegalPageShellProps = {
   badge: string;
@@ -20,14 +21,9 @@ export function LegalPageShell({
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
       <div className={`mx-auto w-full ${widthClass}`}>
-        <nav className="mb-8 text-sm">
-          <Link
-            href="/"
-            className="font-semibold text-cyan-700 transition hover:text-cyan-600"
-          >
-            {"<-"} Home
-          </Link>
-        </nav>
+      <nav className="mb-8 text-sm">
+        <BackNavLink className="font-semibold text-cyan-700 transition hover:text-cyan-600" />
+      </nav>
 
         <section className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-lg shadow-slate-200/40 sm:p-10">
           <p className="inline-flex rounded-full bg-cyan-50 px-4 py-1 text-xs font-bold uppercase tracking-wide text-cyan-800">
