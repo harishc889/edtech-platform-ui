@@ -2,14 +2,10 @@
 
 import Script from "next/script";
 import { useCallback, useState } from "react";
-import { messageForHttpStatus } from "@/lib/aspnet-public-client";
 import {
-  createPaymentOrder,
-  resolvePaymentCsrfToken,
-  verifyPayment,
-} from "@/lib/payment-api";
-
-const RAZORPAY_SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
+  RAZORPAY_CHECKOUT_SCRIPT,
+  runRazorpayPaymentFlow,
+} from "@/lib/razorpay-checkout-flow";
 
 export type PayForCourseButtonProps = {
   /** Numeric course id from the API (not the marketing slug). */
@@ -40,125 +36,14 @@ export default function PayForCourseButton({
 
   const runPayment = useCallback(async () => {
     setError(null);
-
-    if (typeof window === "undefined") return;
-    if (!process.env.NEXT_PUBLIC_API_URL?.trim()) {
-      setError("Payment is not configured (NEXT_PUBLIC_API_URL).");
-      return;
-    }
-
     setBusy(true);
     try {
-      const csrf1 = await resolvePaymentCsrfToken();
-      if (!csrf1.ok) {
-        setError(
-          csrf1.error?.message ??
-            messageForHttpStatus(csrf1.status, "Could not start payment."),
-        );
-        return;
+      const result = await runRazorpayPaymentFlow({ courseId, batchId });
+      if (result.ok) {
+        onSuccess?.();
+      } else {
+        setError(result.message);
       }
-
-      const order = await createPaymentOrder(
-        { courseId, batchId },
-        csrf1.data ?? null,
-      );
-      if (!order.ok || !order.data) {
-        setError(
-          order.error?.message ??
-            messageForHttpStatus(order.status, "Could not create order."),
-        );
-        return;
-      }
-
-      const {
-        orderId,
-        amount,
-        currency,
-        keyId,
-        courseTitle,
-      } = order.data;
-
-      if (!window.Razorpay) {
-        setError("Payment script is still loading. Please try again.");
-        return;
-      }
-
-      const amountPaise = Math.round(Number(amount) * 100);
-
-      await new Promise<void>((resolve) => {
-        const done = () => resolve();
-
-        const rzp = new window.Razorpay!({
-          key: keyId,
-          order_id: orderId,
-          amount: amountPaise,
-          currency: currency || "INR",
-          name: courseTitle,
-          description: courseTitle,
-          handler(response) {
-            void (async () => {
-              try {
-                const csrf2 = await resolvePaymentCsrfToken();
-                if (!csrf2.ok) {
-                  setError(
-                    csrf2.error?.message ??
-                      "Payment succeeded but verification could not start. Contact support with your payment id.",
-                  );
-                  return;
-                }
-
-                const verified = await verifyPayment(
-                  {
-                    razorpayOrderId: response.razorpay_order_id,
-                    razorpayPaymentId: response.razorpay_payment_id,
-                    razorpaySignature: response.razorpay_signature,
-                    batchId,
-                  },
-                  csrf2.data ?? null,
-                );
-
-                if (!verified.ok) {
-                  setError(
-                    verified.error?.message ??
-                      messageForHttpStatus(
-                        verified.status,
-                        "Payment completed but verification failed.",
-                      ),
-                  );
-                  return;
-                }
-
-                onSuccess?.();
-              } catch (e) {
-                setError(
-                  e instanceof Error ? e.message : "Verification failed.",
-                );
-              } finally {
-                done();
-              }
-            })();
-          },
-          modal: {
-            ondismiss: done,
-          },
-        });
-
-        rzp.on("payment.failed", (...args: unknown[]) => {
-          const response = args[0] as
-            | { error?: { description?: string } }
-            | undefined;
-          const msg =
-            response?.error?.description ?? "Payment failed. Please try again.";
-          setError(msg);
-          done();
-        });
-
-        rzp.open();
-      });
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Something went wrong. Try again.",
-      );
     } finally {
       setBusy(false);
     }
@@ -174,7 +59,7 @@ export default function PayForCourseButton({
   return (
     <div className="flex flex-col gap-2">
       <Script
-        src={RAZORPAY_SCRIPT}
+        src={RAZORPAY_CHECKOUT_SCRIPT}
         strategy="lazyOnload"
         onLoad={() => setRazorpayScriptReady(true)}
       />

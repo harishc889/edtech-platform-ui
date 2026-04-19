@@ -113,6 +113,22 @@ export function messageForHttpStatus(status: number, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Status hints for payment / Razorpay — does **not** assume checkout requires login.
+ * 401 usually means the API rejected the call (auth policy, CSRF, or CORS); fix on the server for guest checkout.
+ */
+export function messageForHttpStatusPayment(
+  status: number,
+  fallback: string,
+): string {
+  if (status === 401) {
+    return "Payment was rejected (401). Allow anonymous access to payment endpoints on your API, or sign in if your API requires it.";
+  }
+  if (status === 400) return "Invalid request. Please try again.";
+  if (status === 429) return "Too many requests. Please wait and try again.";
+  return fallback;
+}
+
 export function parseAspNetPublicErrorPayload(
   payload: unknown,
   status: number,

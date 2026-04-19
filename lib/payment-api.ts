@@ -6,9 +6,10 @@ import type {
   PaymentVerifyRequestBody,
   PaymentVerifyResponse,
 } from "@/lib/aspnet-api-types";
+import { getErrorMessageFromPayload } from "@/lib/api-error";
 import {
   aspNetPublicRequest,
-  parseAspNetPublicErrorPayload,
+  messageForHttpStatusPayment,
   shouldSkipPaymentCsrf,
 } from "@/lib/aspnet-public-client";
 
@@ -21,15 +22,14 @@ async function wrapJson<T>(
   if (result.ok) {
     return { ok: true, status: result.status, data: result.data as T };
   }
-  const err = parseAspNetPublicErrorPayload(
+  const message = getErrorMessageFromPayload(
     result.data,
-    result.status,
-    fallbackError,
+    messageForHttpStatusPayment(result.status, fallbackError),
   );
   return {
     ok: false,
     status: result.status,
-    error: { message: err.message, details: err.details },
+    error: { message, details: result.data },
   };
 }
 
