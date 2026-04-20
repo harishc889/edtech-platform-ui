@@ -20,7 +20,7 @@ export type PayForCourseButtonProps = {
 
 /**
  * Full Razorpay flow against ASP.NET Core: CSRF → create-order → checkout.js → CSRF → verify.
- * Requires `NEXT_PUBLIC_API_URL` and an httpOnly `auth_token` cookie on the API origin (log in via the same API base URL).
+ * Requests are sent via Next BFF (`/api/backend/...`) to the ASP.NET API.
  */
 export default function PayForCourseButton({
   courseId,

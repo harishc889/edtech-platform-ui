@@ -51,8 +51,16 @@ export default function LoginPage() {
         return;
       }
 
+      const nextPath =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next")
+          : null;
+      const redirectTo =
+        nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
+          ? nextPath
+          : "/dashboard";
       window.dispatchEvent(new Event("auth:changed"));
-      router.push("/dashboard");
+      router.push(redirectTo);
       router.refresh();
     } finally {
       setIsSubmitting(false);

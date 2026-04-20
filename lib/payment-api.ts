@@ -6,80 +6,105 @@ import type {
   PaymentVerifyRequestBody,
   PaymentVerifyResponse,
 } from "@/lib/aspnet-api-types";
+import axios, { type AxiosError } from "axios";
 import { getErrorMessageFromPayload } from "@/lib/api-error";
-import {
-  aspNetPublicRequest,
-  messageForHttpStatusPayment,
-  shouldSkipPaymentCsrf,
-} from "@/lib/aspnet-public-client";
+import api from "@/lib/api";
+import { bffUrl } from "@/lib/backend-api-client";
 
 const GATEWAY_HEADER = { "X-Payment-Gateway": "Razorpay" } as const;
+const SKIP_CSRF = process.env.NEXT_PUBLIC_PAYMENT_SKIP_CSRF === "true";
 
-async function wrapJson<T>(
-  result: Awaited<ReturnType<typeof aspNetPublicRequest<T>>>,
+export function messageForHttpStatusPayment(
+  status: number,
+  fallback: string,
+): string {
+  if (status === 401) {
+    return "Payment was rejected (401). Allow anonymous access to payment endpoints on your API, or sign in if your API requires it.";
+  }
+  if (status === 400) return "Invalid request. Please try again.";
+  if (status === 429) return "Too many requests. Please wait and try again.";
+  return fallback;
+}
+
+async function runBffRequest<T>(
+  config: Parameters<typeof api.request<T>>[0],
   fallbackError: string,
 ): Promise<ApiResult<T>> {
-  if (result.ok) {
-    return { ok: true, status: result.status, data: result.data as T };
+  try {
+    const res = await api.request<T>(config);
+    return { ok: true, status: res.status, data: res.data };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const ax = error as AxiosError<Record<string, unknown>>;
+      const status = ax.response?.status ?? 0;
+      const payload = ax.response?.data;
+      return {
+        ok: false,
+        status,
+        error: {
+          message: getErrorMessageFromPayload(
+            payload,
+            messageForHttpStatusPayment(status, fallbackError),
+          ),
+          details: payload ?? ax.message,
+        },
+      };
+    }
+    return {
+      ok: false,
+      status: 0,
+      error: { message: "Network error. Please try again.", details: error },
+    };
   }
-  const message = getErrorMessageFromPayload(
-    result.data,
-    messageForHttpStatusPayment(result.status, fallbackError),
-  );
-  return {
-    ok: false,
-    status: result.status,
-    error: { message, details: result.data },
-  };
 }
 
 /** GET /api/auth/csrf — sets `csrf` cookie; returns JSON `{ csrfToken }`. */
 export async function fetchPaymentCsrfToken(): Promise<
   ApiResult<CsrfTokenResponse>
 > {
-  const result = await aspNetPublicRequest<CsrfTokenResponse>(
-    "/api/auth/csrf",
-    { method: "GET" },
+  return runBffRequest<CsrfTokenResponse>(
+    {
+      method: "GET",
+      url: bffUrl("Auth", "csrf"),
+    },
+    "Could not obtain security token.",
   );
-  return wrapJson(result, "Could not obtain security token.");
 }
 
 export async function createPaymentOrder(
   body: PaymentCreateOrderRequestBody,
   csrfToken: string | null,
 ): Promise<ApiResult<PaymentCreateOrderResponse>> {
-  const result = await aspNetPublicRequest<PaymentCreateOrderResponse>(
-    "/api/Payment/create-order",
+  return runBffRequest<PaymentCreateOrderResponse>(
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...GATEWAY_HEADER,
-      },
       data: body,
-      csrfToken: csrfToken || undefined,
+      url: bffUrl("Payment", "create-order"),
+      headers: {
+        ...GATEWAY_HEADER,
+        ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+      },
     },
+    "Could not create payment order.",
   );
-  return wrapJson(result, "Could not create payment order.");
 }
 
 export async function verifyPayment(
   body: PaymentVerifyRequestBody,
   csrfToken: string | null,
 ): Promise<ApiResult<PaymentVerifyResponse>> {
-  const result = await aspNetPublicRequest<PaymentVerifyResponse>(
-    "/api/Payment/verify",
+  return runBffRequest<PaymentVerifyResponse>(
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...GATEWAY_HEADER,
-      },
       data: body,
-      csrfToken: csrfToken || undefined,
+      url: bffUrl("Payment", "verify"),
+      headers: {
+        ...GATEWAY_HEADER,
+        ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+      },
     },
+    "Could not verify payment.",
   );
-  return wrapJson(result, "Could not verify payment.");
 }
 
 /**
@@ -88,7 +113,7 @@ export async function verifyPayment(
 export async function resolvePaymentCsrfToken(): Promise<
   ApiResult<string | null>
 > {
-  if (shouldSkipPaymentCsrf()) {
+  if (SKIP_CSRF) {
     return { ok: true, status: 200, data: null };
   }
   const csrf = await fetchPaymentCsrfToken();

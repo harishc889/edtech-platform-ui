@@ -1,10 +1,7 @@
-import {
-  isAspNetPublicApiConfigured,
-  messageForHttpStatusPayment,
-} from "@/lib/aspnet-public-client";
 import { normalizePaymentOrderForCheckout } from "@/lib/payment-order-normalize";
 import {
   createPaymentOrder,
+  messageForHttpStatusPayment,
   resolvePaymentCsrfToken,
   verifyPayment,
 } from "@/lib/payment-api";
@@ -52,20 +49,13 @@ export type RazorpayFlowResult =
 
 /**
  * CSRF → create-order → Razorpay modal → CSRF → verify.
- * Call after form validation; user must be logged in (API cookie on `NEXT_PUBLIC_API_URL`).
+ * Call after form validation; requests go through Next BFF (`/api/backend/...`).
  */
 export async function runRazorpayPaymentFlow(params: {
   courseId: number;
   batchId: number;
 }): Promise<RazorpayFlowResult> {
   const { courseId, batchId } = params;
-
-  if (!isAspNetPublicApiConfigured()) {
-    return {
-      ok: false,
-      message: "Payment is not configured (NEXT_PUBLIC_API_URL).",
-    };
-  }
 
   try {
     await ensureRazorpayLoaded();

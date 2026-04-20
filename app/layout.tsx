@@ -20,9 +20,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "EdTech Academy — Live courses & professional learning",
-  description:
-    "Join interactive live classes, track progress, and build skills that matter.",
+  title: "LA Bim Academy",
+  description: "Live courses & professional learning",
 };
 
 export default function RootLayout({
