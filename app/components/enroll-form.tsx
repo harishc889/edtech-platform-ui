@@ -565,7 +565,7 @@ export function EnrollForm({ initialCourseId }: Props) {
                   required
                 >
                   <option value="razorpay">Razorpay</option>
-                  <option value="stripe">Stripe</option>
+                  {/* <option value="stripe">Stripe</option> */}
                 </SelectField>
               </label>
             </div>

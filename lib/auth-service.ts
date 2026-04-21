@@ -120,6 +120,33 @@ export async function register(
   );
 }
 
+/** POST /api/Auth/forgot-password */
+export async function forgotPassword(
+  email: string,
+  options: AuthRequestOptions = {},
+): Promise<AuthServiceResponse<{ message?: string }>> {
+  return jsonRequest<{ message?: string }>(
+    "POST",
+    ["Auth", "forgot-password"],
+    { email: email.trim() },
+    options,
+  );
+}
+
+/** POST /api/Auth/reset-password */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+  options: AuthRequestOptions = {},
+): Promise<AuthServiceResponse<{ message?: string }>> {
+  return jsonRequest<{ message?: string }>(
+    "POST",
+    ["Auth", "reset-password"],
+    { token: token.trim(), newPassword },
+    options,
+  );
+}
+
 /** POST /api/Auth/logout — clears auth cookie on the server. */
 export async function logout(
   options: AuthRequestOptions = {},

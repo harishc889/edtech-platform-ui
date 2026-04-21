@@ -145,6 +145,15 @@ export default function LoginPage() {
                 error={passwordError}
               />
 
+              <div className="-mt-2 flex justify-end">
+                <Link
+                  href="/login/forgot-password"
+                  className="text-sm font-semibold text-cyan-700 hover:text-cyan-600"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
               {formError ? (
                 <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                   {formError}
