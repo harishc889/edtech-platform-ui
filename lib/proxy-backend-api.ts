@@ -118,6 +118,12 @@ export async function proxyToAspNetBackend(
   const authorization = request.headers.get("authorization");
   if (authorization) headers.set("Authorization", authorization);
 
+  const csrfToken = request.headers.get("x-csrf-token");
+  if (csrfToken) headers.set("X-CSRF-TOKEN", csrfToken);
+
+  const xPaymentGateway = request.headers.get("x-payment-gateway");
+  if (xPaymentGateway) headers.set("X-Payment-Gateway", xPaymentGateway);
+
   const contentType = request.headers.get("content-type");
   const hasBody = !["GET", "HEAD", "OPTIONS"].includes(method);
 
