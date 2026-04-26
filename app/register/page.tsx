@@ -34,21 +34,28 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  function validate() {
+  function validate(
+    nextName: string,
+    nextEmail: string,
+    nextPassword: string,
+    nextConfirmPassword: string,
+  ) {
     const nextErrors: typeof fieldErrors = {};
-    const nextName = name.trim();
-    const nextEmail = email.trim();
 
     if (!nextName) nextErrors.name = "Name is required.";
     if (!nextEmail) nextErrors.email = "Email is required.";
     else if (!isValidEmail(nextEmail))
       nextErrors.email = "Enter a valid email address.";
 
-    if (!password) nextErrors.password = "Password is required.";
-    if (!confirmPassword)
+    if (!nextPassword) nextErrors.password = "Password is required.";
+    if (!nextConfirmPassword)
       nextErrors.confirmPassword = "Please confirm your password.";
 
-    if (password && confirmPassword && password !== confirmPassword) {
+    if (
+      nextPassword &&
+      nextConfirmPassword &&
+      nextPassword !== nextConfirmPassword
+    ) {
       nextErrors.confirmPassword = "Passwords do not match.";
     }
 
@@ -60,11 +67,27 @@ export default function RegisterPage() {
     e.preventDefault();
     setFormError(null);
 
-    if (!validate()) return;
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const nextName = (formData.get("name")?.toString() ?? name).trim();
+    const nextEmail = (formData.get("email")?.toString() ?? email).trim();
+    const nextPassword = formData.get("password")?.toString() ?? password;
+    const nextConfirmPassword =
+      formData.get("confirmPassword")?.toString() ?? confirmPassword;
+
+    setName(nextName);
+    setEmail(nextEmail);
+    setPassword(nextPassword);
+    setConfirmPassword(nextConfirmPassword);
+
+    if (
+      !validate(nextName, nextEmail, nextPassword, nextConfirmPassword)
+    )
+      return;
 
     setIsSubmitting(true);
     try {
-      const response = await register(name, email, password);
+      const response = await register(nextName, nextEmail, nextPassword);
 
       if (!response.ok) {
         setFormError(
@@ -137,6 +160,7 @@ export default function RegisterPage() {
               <label className="block">
                 <span className={authLabelClass}>Name</span>
                 <input
+                  name="name"
                   className={authInputClass}
                   placeholder="Your name"
                   value={name}
@@ -157,6 +181,7 @@ export default function RegisterPage() {
                   Email
                 </span>
                 <input
+                  name="email"
                   className={authInputClass}
                   placeholder="name@example.com"
                   value={email}
@@ -177,6 +202,7 @@ export default function RegisterPage() {
 
               <PasswordFieldWithToggle
                 label="Password"
+                name="password"
                 placeholder="Create a password"
                 autoComplete="new-password"
                 value={password}
@@ -196,6 +222,7 @@ export default function RegisterPage() {
 
               <PasswordFieldWithToggle
                 label="Confirm password"
+                name="confirmPassword"
                 placeholder="Re-enter your password"
                 autoComplete="new-password"
                 value={confirmPassword}

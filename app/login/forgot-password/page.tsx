@@ -20,8 +20,7 @@ export default function ForgotPasswordPage() {
   const [isError, setIsError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function validate() {
-    const nextEmail = email.trim();
+  function validate(nextEmail: string) {
     if (!nextEmail) {
       setEmailError("Email is required.");
       return false;
@@ -40,11 +39,16 @@ export default function ForgotPasswordPage() {
     setStatus(null);
     setIsError(false);
 
-    if (!validate()) return;
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const nextEmail = (formData.get("email")?.toString() ?? email).trim();
+    setEmail(nextEmail);
+
+    if (!validate(nextEmail)) return;
 
     setIsSubmitting(true);
     try {
-      const response = await forgotPassword(email);
+      const response = await forgotPassword(nextEmail);
       if (!response.ok) {
         setIsError(true);
         setStatus(
@@ -83,6 +87,7 @@ export default function ForgotPasswordPage() {
             <label className="block">
               <span className={authLabelClass}>Email</span>
               <input
+                name="email"
                 className={authInputClass}
                 placeholder="name@example.com"
                 value={email}
