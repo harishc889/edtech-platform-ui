@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { asRecordList } from "@/lib/api-normalize";
 import { useToast } from "@/app/components/toast-provider";
 import { fetchCurrentUser, logout, type AuthUser } from "@/lib/auth-service";
-import { PROGRAM_CATALOG } from "@/lib/program-catalog";
+import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import { getPublishedCourses } from "@/lib/course-service";
+import type { Program } from "@/lib/program-catalog";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -25,6 +28,7 @@ export default function SiteHeader() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [authVersion, setAuthVersion] = useState(0);
+  const [programs, setPrograms] = useState<Program[]>([]);
   const { showToast } = useToast();
   const desktopCoursesRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -53,6 +57,17 @@ export default function SiteHeader() {
     }
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void getPublishedCourses().then((res) => {
+      if (!active || !res.ok) return;
+      setPrograms(asRecordList(res.data).map((row) => mapCourseToProgram(row)));
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -221,7 +236,7 @@ export default function SiteHeader() {
             </button>
             {desktopCoursesOpen ? (
               <div className="absolute left-0 top-full z-50 mt-3 w-80 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/60">
-                {PROGRAM_CATALOG.map((course) => (
+                {programs.map((course) => (
                   <Link
                     key={course.id}
                     href={`/courses/${course.id}`}
@@ -378,7 +393,7 @@ export default function SiteHeader() {
 
             {coursesOpen ? (
               <div className="ml-2 space-y-1 rounded-xl border border-slate-100 bg-slate-50/70 p-2">
-                {PROGRAM_CATALOG.map((course) => (
+                {programs.map((course) => (
                   <Link
                     key={course.id}
                     href={`/courses/${course.id}`}

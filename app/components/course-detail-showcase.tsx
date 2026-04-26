@@ -74,8 +74,10 @@ export default function CourseDetailShowcase({
   const courseFaqItems = useMemo(() => {
     if (course.faqs && course.faqs.length > 0) return course.faqs;
     return Array.from({ length: 14 }).map((_, idx) => ({
-      q: `FAQ ${idx + 1}`,
+      id: idx + 1,
+      question: `FAQ ${idx + 1}`,
       answerHtml: "Add your FAQ details and description.",
+      order: idx + 1,
     }));
   }, [
     course.assessments,
@@ -630,14 +632,16 @@ export default function CourseDetailShowcase({
         </div>
 
         <div className="mx-auto mt-12 max-w-3xl space-y-3 sm:mt-14 sm:space-y-4">
-          {courseFaqItems.map((item) => (
+          {courseFaqItems.map((item, idx) => (
             <details
-              key={item.q}
+              key={idx}
               className="group rounded-2xl border border-slate-200/90 bg-white/90 shadow-sm ring-1 ring-slate-100/80 transition-[border-color,box-shadow,background-color] duration-200 open:border-slate-700/90 open:bg-gradient-to-br open:from-slate-700 open:via-slate-700 open:to-slate-600 open:shadow-xl open:ring-slate-800/60"
             >
               <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-left sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
                 <span className="min-w-0 flex-1 font-display text-base font-bold leading-snug text-slate-900 group-open:text-white sm:text-lg">
-                  {item.q}
+                  {(item as { question?: string; q?: string }).question ??
+                    (item as { question?: string; q?: string }).q ??
+                    "FAQ"}
                 </span>
                 <span
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200/90 bg-slate-50 text-slate-600 transition duration-200 group-open:border-white/20 group-open:bg-white/10 group-open:text-white"
