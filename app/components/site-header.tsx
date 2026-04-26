@@ -32,6 +32,8 @@ export default function SiteHeader() {
   const initialAuthCheckDone = useRef(false);
   /** Previous route — used to detect leaving /login or /register. */
   const prevPathnameRef = useRef<string | null>(null);
+  /** Prevent duplicate inactive-session toasts during repeated /me checks. */
+  const inactiveSessionToastShownRef = useRef(false);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -92,6 +94,29 @@ export default function SiteHeader() {
 
       const response = await fetchCurrentUser();
       if (!active) return;
+      if (!response.ok) {
+        const details = response.error?.details;
+        const payload =
+          details && typeof details === "object"
+            ? (details as Record<string, unknown>)
+            : null;
+        const isInactiveSession = payload?.error === "SESSION_INACTIVE";
+        const requiresLogin = payload?.requiresLogin === true;
+        const message =
+          typeof payload?.message === "string" ? payload.message : null;
+
+        if (isInactiveSession && requiresLogin && message) {
+          if (!inactiveSessionToastShownRef.current) {
+            showToast({ type: "error", message, durationMs: 7000 });
+            inactiveSessionToastShownRef.current = true;
+          }
+        } else {
+          inactiveSessionToastShownRef.current = false;
+        }
+      } else {
+        inactiveSessionToastShownRef.current = false;
+      }
+
       setCurrentUser(response.ok ? response.data ?? null : null);
       setCheckingAuth(false);
       initialAuthCheckDone.current = true;
