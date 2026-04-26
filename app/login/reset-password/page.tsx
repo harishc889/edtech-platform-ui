@@ -25,7 +25,7 @@ function ResetPasswordContent() {
   const [isError, setIsError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function validate() {
+  function validate(nextNewPassword: string, nextConfirmPassword: string) {
     let hasError = false;
     setNewPasswordError(null);
     setConfirmPasswordError(null);
@@ -35,18 +35,18 @@ function ResetPasswordContent() {
       setIsError(true);
       hasError = true;
     }
-    if (!newPassword) {
+    if (!nextNewPassword) {
       setNewPasswordError("New password is required.");
       hasError = true;
-    } else if (newPassword.length < 8) {
+    } else if (nextNewPassword.length < 8) {
       setNewPasswordError("Password must be at least 8 characters.");
       hasError = true;
     }
 
-    if (!confirmPassword) {
+    if (!nextConfirmPassword) {
       setConfirmPasswordError("Please confirm your new password.");
       hasError = true;
-    } else if (newPassword !== confirmPassword) {
+    } else if (nextNewPassword !== nextConfirmPassword) {
       setConfirmPasswordError("Passwords do not match.");
       hasError = true;
     }
@@ -59,11 +59,20 @@ function ResetPasswordContent() {
     setStatus(null);
     setIsError(false);
 
-    if (!validate()) return;
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const nextNewPassword =
+      formData.get("newPassword")?.toString() ?? newPassword;
+    const nextConfirmPassword =
+      formData.get("confirmPassword")?.toString() ?? confirmPassword;
+    setNewPassword(nextNewPassword);
+    setConfirmPassword(nextConfirmPassword);
+
+    if (!validate(nextNewPassword, nextConfirmPassword)) return;
 
     setIsSubmitting(true);
     try {
-      const response = await resetPassword(token, newPassword);
+      const response = await resetPassword(token, nextNewPassword);
       if (!response.ok) {
         setIsError(true);
         setStatus(
@@ -104,6 +113,7 @@ function ResetPasswordContent() {
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <PasswordFieldWithToggle
               label="New password"
+              name="newPassword"
               placeholder="Enter new password"
               autoComplete="new-password"
               value={newPassword}
@@ -119,6 +129,7 @@ function ResetPasswordContent() {
 
             <PasswordFieldWithToggle
               label="Confirm password"
+              name="confirmPassword"
               placeholder="Re-enter new password"
               autoComplete="new-password"
               value={confirmPassword}

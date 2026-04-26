@@ -62,6 +62,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
 
 type Props = {
   label: string;
+  name?: string;
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
@@ -77,6 +78,7 @@ type Props = {
 
 export function PasswordFieldWithToggle({
   label,
+  name,
   value,
   onChange,
   placeholder,
@@ -93,6 +95,7 @@ export function PasswordFieldWithToggle({
       <div className="relative mt-2">
         <input
           className={`${authInputBase} pr-4`}
+          name={name}
           placeholder={placeholder}
           type={visible ? "text" : "password"}
           value={value}
