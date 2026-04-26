@@ -205,7 +205,7 @@ export async function proxyToAspNetBackend(
         {
           message: isDev
             ? `Unable to reach the ASP.NET Core API. Check API_BASE_URL, API_ALLOW_SELF_SIGNED_TLS, and restart dev server.${code ? ` Error: ${code}` : ""}`
-            : "Unable to reach the ASP.NET Core API. Check API_BASE_URL and that the API is running.",
+            : "Service is temporarily unavailable. Please try again shortly.",
         },
         { status: 502 },
       ),
