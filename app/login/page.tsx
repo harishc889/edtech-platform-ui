@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { login } from "@/lib/auth-service";
+import { getSessionInactiveMessage } from "@/lib/auth-session-error";
 import {
   PasswordFieldWithToggle,
   authInputClass,
@@ -50,6 +51,12 @@ export default function LoginPage() {
       const response = await login(nextEmail, nextPassword);
 
       if (!response.ok) {
+        const inactiveMessage = getSessionInactiveMessage(response.error);
+        if (inactiveMessage) {
+          // Global interceptor + ToastProvider already shows this message.
+          setFormError(null);
+          return;
+        }
         setFormError(response.error?.message ?? "Invalid email or password.");
         return;
       }
