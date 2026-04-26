@@ -15,7 +15,10 @@ export function proxy(request: NextRequest) {
   if (isProtected && !authCookie) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    const nextPath =
+      request.nextUrl.pathname +
+      (request.nextUrl.search ? request.nextUrl.search : "");
+    loginUrl.searchParams.set("next", nextPath);
     return NextResponse.redirect(loginUrl);
   }
 
