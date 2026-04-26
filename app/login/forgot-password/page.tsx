@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
               <input
                 name="email"
                 className={authInputClass}
-                placeholder="name@example.com"
+                placeholder="Email ID"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);

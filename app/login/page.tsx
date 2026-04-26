@@ -126,7 +126,7 @@ export default function LoginPage() {
                 <input
                   name="email"
                   className={authInputClass}
-                  placeholder="name@example.com"
+                  placeholder="Email ID"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -144,7 +144,7 @@ export default function LoginPage() {
               <PasswordFieldWithToggle
                 label="Password"
                 name="password"
-                placeholder="Your password"
+                placeholder="Enter your password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
