@@ -107,7 +107,7 @@ export default function SiteHeader() {
 
         if (isInactiveSession && requiresLogin && message) {
           if (!inactiveSessionToastShownRef.current) {
-            showToast({ type: "error", message, durationMs: 4200 });
+            showToast({ type: "error", message, durationMs: 7000 });
             inactiveSessionToastShownRef.current = true;
           }
         } else {
