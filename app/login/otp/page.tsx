@@ -95,7 +95,7 @@ export default function OtpLoginPage() {
               </span>
               <input
                 className={inputClass}
-                placeholder="name@example.com or +1 555 123 4567"
+                placeholder="Email ID or +1 555 123 4567"
                 value={identifier}
                 onChange={(e) => handleIdentifierChange(e.target.value)}
                 autoComplete="username"

@@ -138,3 +138,9 @@ body {
 .home-faq-html :where(a:hover) {
   color: rgb(186 230 253);
 }
+
+/* Keep password reveal UI consistent across browsers by hiding Edge native controls. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
