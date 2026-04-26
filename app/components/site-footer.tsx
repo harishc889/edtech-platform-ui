@@ -123,7 +123,10 @@ export default function SiteFooter() {
             </ul>
           </div>
         </div>
-        <div className="mt-12 border-t border-slate-800 pt-8 text-center text-xs text-slate-500">
+        <div
+          suppressHydrationWarning
+          className="mt-12 border-t border-slate-800 pt-8 text-center text-xs text-slate-500"
+        >
           © {new Date().getFullYear()} LA Bim Academy. All rights reserved.
         </div>
       </div>
