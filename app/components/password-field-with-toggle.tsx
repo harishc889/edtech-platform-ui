@@ -16,13 +16,13 @@ export const authPrimaryButtonClass =
   "flex w-full items-center justify-center rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-4 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-60";
 
 const toggleButtonClass =
-  "group absolute right-1.5 top-1/2 flex h-10 w-11 -translate-y-1/2 items-center justify-center rounded-xl bg-gradient-to-b from-white to-slate-50 text-slate-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-slate-200/90 transition hover:to-cyan-50/80 hover:text-cyan-700 hover:ring-cyan-300/60 hover:shadow-[0_4px_14px_-4px_rgba(6,182,212,0.35)] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500";
+  "group absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-transparent p-0 text-slate-400 transition hover:text-cyan-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500";
 
 function EyeIcon({ visible }: { visible: boolean }) {
   if (visible) {
     return (
       <svg
-        className="h-[1.35rem] w-[1.35rem] transition group-hover:scale-105"
+        className="h-[1.05rem] w-[1.05rem] transition"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -39,7 +39,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
   }
   return (
     <svg
-      className="h-[1.35rem] w-[1.35rem] transition group-hover:scale-105"
+      className="h-[1.05rem] w-[1.05rem] transition"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -62,6 +62,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
 
 type Props = {
   label: string;
+  name?: string;
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
@@ -77,6 +78,7 @@ type Props = {
 
 export function PasswordFieldWithToggle({
   label,
+  name,
   value,
   onChange,
   placeholder,
@@ -92,14 +94,15 @@ export function PasswordFieldWithToggle({
       <span className="text-sm font-semibold text-slate-800">{label}</span>
       <div className="relative mt-2">
         <input
-          className={`${authInputBase} pr-4`}
+          className={`${authInputBase} pr-14`}
+          name={name}
           placeholder={placeholder}
           type={visible ? "text" : "password"}
           value={value}
           onChange={onChange}
           autoComplete={autoComplete}
         />
-        {/* <button
+        <button
           type="button"
           onClick={onToggleVisible}
           className={toggleButtonClass}
@@ -107,7 +110,7 @@ export function PasswordFieldWithToggle({
           aria-pressed={visible}
         >
           <EyeIcon visible={visible} />
-        </button> */}
+        </button>
       </div>
       {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
     </label>

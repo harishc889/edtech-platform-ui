@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { login } from "@/lib/auth-service";
+import { getSessionInactiveMessage } from "@/lib/auth-session-error";
 import {
   PasswordFieldWithToggle,
   authInputClass,
@@ -23,10 +24,7 @@ export default function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function validate() {
-    const nextEmail = email.trim();
-    const nextPassword = password;
-
+  function validate(nextEmail: string, nextPassword: string) {
     const nextEmailError = nextEmail ? null : "Email is required.";
     const nextPasswordError = nextPassword ? null : "Password is required.";
 
@@ -39,14 +37,26 @@ export default function LoginPage() {
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
-    if (!validate()) return;
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const nextEmail = (formData.get("email")?.toString() ?? email).trim();
+    const nextPassword = formData.get("password")?.toString() ?? password;
+    setEmail(nextEmail);
+    setPassword(nextPassword);
+    if (!validate(nextEmail, nextPassword)) return;
 
     setIsSubmitting(true);
     setFormError(null);
     try {
-      const response = await login(email, password);
+      const response = await login(nextEmail, nextPassword);
 
       if (!response.ok) {
+        const inactiveMessage = getSessionInactiveMessage(response.error);
+        if (inactiveMessage) {
+          // Global interceptor + ToastProvider already shows this message.
+          setFormError(null);
+          return;
+        }
         setFormError(response.error?.message ?? "Invalid email or password.");
         return;
       }
@@ -114,8 +124,9 @@ export default function LoginPage() {
               <label className="block">
                 <span className={authLabelClass}>Email</span>
                 <input
+                  name="email"
                   className={authInputClass}
-                  placeholder="name@example.com"
+                  placeholder="Email ID"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -132,7 +143,8 @@ export default function LoginPage() {
 
               <PasswordFieldWithToggle
                 label="Password"
-                placeholder="Your password"
+                name="password"
+                placeholder="Enter your password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => {

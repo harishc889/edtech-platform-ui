@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useState } from "react";
 import { asRecordList } from "@/lib/api-normalize";
+import { City, Country, State as GeoState } from "country-state-city";
 import {
   authSelectClass,
 } from "@/app/components/password-field-with-toggle";
@@ -132,6 +133,30 @@ export function EnrollForm({ initialCourseId }: Props) {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [selectedCourseDetail, setSelectedCourseDetail] =
     useState<CourseOption | null>(null);
+  const countryOptions = useMemo(
+    () => Country.getAllCountries().sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  );
+  const indiaCountry = useMemo(
+    () => countryOptions.find((c) => c.name === "India") ?? null,
+    [countryOptions],
+  );
+  const stateOptions = useMemo(() => {
+    if (country !== "India" || !indiaCountry) return [];
+    return GeoState.getStatesOfCountry(indiaCountry.isoCode).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [country, indiaCountry]);
+  const cityOptions = useMemo(() => {
+    if (country !== "India" || !indiaCountry || !stateValue) return [];
+    const selectedState = stateOptions.find((s) => s.name === stateValue);
+    if (!selectedState) return [];
+    return City.getCitiesOfState(
+      indiaCountry.isoCode,
+      selectedState.isoCode,
+    ).sort((a, b) => a.name.localeCompare(b.name));
+  }, [country, indiaCountry, stateOptions, stateValue]);
+  const isIndia = country === "India";
 
   const program = useMemo(
     () => courseOptions.find((c) => c.id === courseId) ?? null,
@@ -270,6 +295,10 @@ export function EnrollForm({ initialCourseId }: Props) {
     // Designation field is optional / hidden in the current layout — do not block submit.
     if (!courseId.trim()) nextErrors.course = "Course is required.";
     if (!country.trim()) nextErrors.country = "Country is required.";
+    if (isIndia) {
+      if (!stateValue.trim()) nextErrors.state = "State is required.";
+      if (!city.trim()) nextErrors.city = "City is required.";
+    }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -532,50 +561,91 @@ export function EnrollForm({ initialCourseId }: Props) {
                 selectClassName={selectClass}
                 value={country}
                 onChange={(e) => {
-                  setCountry(e.target.value);
+                  const nextCountry = e.target.value;
+                  setCountry(nextCountry);
                   setErrors((prev) => ({ ...prev, country: "" }));
+                  if (nextCountry !== "India") {
+                    setStateValue("");
+                    setCity("");
+                    setErrors((prev) => ({ ...prev, state: "", city: "" }));
+                  }
                 }}
                 required
               >
-                <option>India</option>
-                <option>United States</option>
-                <option>United Kingdom</option>
-                <option>Canada</option>
-                <option>Australia</option>
-                <option>United Arab Emirates</option>
-                <option>Singapore</option>
-                <option>Other</option>
+                {countryOptions.map((countryItem) => (
+                  <option key={countryItem.isoCode} value={countryItem.name}>
+                    {countryItem.name}
+                  </option>
+                ))}
               </SelectField>
               {errors.country ? (
                 <p className="mt-1 text-xs text-red-600">{errors.country}</p>
               ) : null}
             </label>
-            <label className="block sm:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                State *
-              </span>
-              <input
-                type="text"
-                value={stateValue}
-                onChange={(e) => setStateValue(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none ring-cyan-500/30 focus:border-cyan-500 focus:ring-2"
-                placeholder="State"
-                required
-              />
-            </label>
-            <label className="block sm:col-span-1">
-              <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                City *
-              </span>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none ring-cyan-500/30 focus:border-cyan-500 focus:ring-2"
-                placeholder="City"
-                required
-              />
-            </label>
+            {isIndia ? (
+              <>
+                <label className="block sm:col-span-1">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    State *
+                  </span>
+                  <SelectField
+                    className="relative mt-2"
+                    selectClassName={selectClass}
+                    value={stateValue}
+                    onChange={(e) => {
+                      const nextState = e.target.value;
+                      setStateValue(nextState);
+                      setCity("");
+                      setErrors((prev) => ({ ...prev, state: "", city: "" }));
+                    }}
+                    required
+                  >
+                    <option value="" disabled>
+                      Select State
+                    </option>
+                    {stateOptions.map((stateItem) => (
+                      <option key={stateItem.isoCode} value={stateItem.name}>
+                        {stateItem.name}
+                      </option>
+                    ))}
+                  </SelectField>
+                  {errors.state ? (
+                    <p className="mt-1 text-xs text-red-600">{errors.state}</p>
+                  ) : null}
+                </label>
+                <label className="block sm:col-span-1">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    City *
+                  </span>
+                  <SelectField
+                    className="relative mt-2"
+                    selectClassName={selectClass}
+                    value={city}
+                    onChange={(e) => {
+                      setCity(e.target.value);
+                      setErrors((prev) => ({ ...prev, city: "" }));
+                    }}
+                    disabled={!stateValue}
+                    required
+                  >
+                    <option value="" disabled>
+                      {stateValue ? "Select City" : "Select State first"}
+                    </option>
+                    {cityOptions.map((cityItem) => (
+                      <option
+                        key={`${cityItem.countryCode}-${cityItem.stateCode}-${cityItem.name}`}
+                        value={cityItem.name}
+                      >
+                        {cityItem.name}
+                      </option>
+                    ))}
+                  </SelectField>
+                  {errors.city ? (
+                    <p className="mt-1 text-xs text-red-600">{errors.city}</p>
+                  ) : null}
+                </label>
+              </>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

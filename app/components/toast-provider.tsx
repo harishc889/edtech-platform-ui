@@ -224,6 +224,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    function onSessionInactive(event: Event) {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      const message =
+        typeof detail?.message === "string" && detail.message.trim()
+          ? detail.message
+          : "Your session has expired. Please login again.";
+      showToast({ type: "error", message, durationMs: 4200 });
+    }
+
+    window.addEventListener("auth:session-inactive", onSessionInactive as EventListener);
+    return () => {
+      window.removeEventListener(
+        "auth:session-inactive",
+        onSessionInactive as EventListener,
+      );
+    };
+  }, [showToast]);
+
+  useEffect(() => {
     return () => {
       for (const timer of timers.current.values()) {
         window.clearTimeout(timer);
