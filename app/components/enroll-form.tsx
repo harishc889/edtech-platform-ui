@@ -3,15 +3,15 @@
 import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useState } from "react";
+import { asRecordList } from "@/lib/api-normalize";
 import {
   authSelectClass,
 } from "@/app/components/password-field-with-toggle";
 import { SelectField } from "@/app/components/select-field";
 import {
-  PROGRAM_CATALOG,
-  getProgramById,
   type PaymentOption,
 } from "@/lib/program-catalog";
+import { getCourseById, getPublishedCourses } from "@/lib/course-service";
 import {
   RAZORPAY_CHECKOUT_SCRIPT,
   runRazorpayPaymentFlow,
@@ -43,15 +43,70 @@ type Props = {
   initialCourseId?: string;
 };
 
+type CourseOption = {
+  id: string;
+  courseCode: string;
+  title: string;
+  upfrontInr: number;
+  seatBookingInr: number;
+  apiCourseId: number;
+  defaultBatchId: number;
+};
+
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function mapCourseOption(raw: Record<string, unknown>, index: number): CourseOption {
+  const apiCourseId = toNumber(raw.id ?? raw.courseId, index + 1);
+  const title =
+    typeof raw.title === "string" && raw.title.trim()
+      ? raw.title.trim()
+      : typeof raw.name === "string" && raw.name.trim()
+        ? raw.name.trim()
+        : `Course ${apiCourseId}`;
+  const courseCodeSource =
+    typeof raw.courseCode === "string" && raw.courseCode.trim()
+      ? raw.courseCode.trim()
+      : typeof raw.code === "string" && raw.code.trim()
+        ? raw.code.trim()
+        : typeof raw.slug === "string" && raw.slug.trim()
+          ? raw.slug.trim()
+          : String(raw.id ?? title);
+  const courseCode = courseCodeSource.replace(/\s+/g, "-");
+  const id = courseCode;
+
+  const upfrontInr = toNumber(
+    raw.upfrontInr ?? raw.upfrontAmount ?? raw.price ?? raw.amount,
+    0,
+  );
+  const seatBookingInr = toNumber(
+    raw.seatBookingInr ?? raw.bookingAmount ?? raw.registrationAmount,
+    Math.min(upfrontInr || 5000, 5000),
+  );
+  const defaultBatchId = toNumber(raw.defaultBatchId ?? raw.batchId, 1);
+
+  return {
+    id,
+    courseCode,
+    title,
+    upfrontInr,
+    seatBookingInr,
+    apiCourseId,
+    defaultBatchId,
+  };
+}
+
 export function EnrollForm({ initialCourseId }: Props) {
-  const defaultCourseId = PROGRAM_CATALOG[0]?.id ?? "";
-
-  const resolvedInitial =
-    initialCourseId && getProgramById(initialCourseId)
-      ? initialCourseId
-      : defaultCourseId;
-
-  const [courseId, setCourseId] = useState(resolvedInitial);
+  const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
+  const [courseLoading, setCourseLoading] = useState(true);
+  const [courseLoadError, setCourseLoadError] = useState<string | null>(null);
+  const [courseId, setCourseId] = useState(initialCourseId ?? "");
   const [paymentId, setPaymentId] = useState<string>("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -75,19 +130,25 @@ export function EnrollForm({ initialCourseId }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [selectedCourseDetail, setSelectedCourseDetail] =
+    useState<CourseOption | null>(null);
 
-  const program = getProgramById(courseId);
+  const program = useMemo(
+    () => courseOptions.find((c) => c.id === courseId) ?? null,
+    [courseOptions, courseId],
+  );
+  const effectiveProgram = selectedCourseDetail ?? program;
 
   const paymentOptions: PaymentOption[] = useMemo(() => {
-    if (!program) return [];
+    if (!effectiveProgram) return [];
 
     if (paymentMode === "upfront") {
       return [
         {
           id: "upfront",
           label: "Upfront Payment",
-          amountDisplay: formatInr(program.upfrontInr),
-          amountInr: program.upfrontInr,
+          amountDisplay: formatInr(effectiveProgram.upfrontInr),
+          amountInr: effectiveProgram.upfrontInr,
         },
       ];
     }
@@ -97,14 +158,14 @@ export function EnrollForm({ initialCourseId }: Props) {
         {
           id: "book-slot",
           label: "Book Slot",
-          amountDisplay: formatInr(program.seatBookingInr),
-          amountInr: program.seatBookingInr,
+          amountDisplay: formatInr(effectiveProgram.seatBookingInr),
+          amountInr: effectiveProgram.seatBookingInr,
         },
       ];
     }
 
     return [3, 6, 9, 12].map((months) => {
-      const monthly = Math.ceil(program.upfrontInr / months);
+      const monthly = Math.ceil(effectiveProgram.upfrontInr / months);
       return {
         id: `emi-${months}`,
         label: `EMI - ${months} Months`,
@@ -112,15 +173,66 @@ export function EnrollForm({ initialCourseId }: Props) {
         amountInr: monthly * months,
       };
     });
-  }, [program, paymentMode]);
+  }, [effectiveProgram, paymentMode]);
 
   useEffect(() => {
-    const next =
-      initialCourseId && getProgramById(initialCourseId)
-        ? initialCourseId
-        : defaultCourseId;
-    setCourseId(next);
-  }, [initialCourseId, defaultCourseId]);
+    let active = true;
+    setCourseLoading(true);
+    setCourseLoadError(null);
+    void getPublishedCourses().then((res) => {
+      if (!active) return;
+      if (!res.ok) {
+        setCourseOptions([]);
+        setCourseLoadError(res.message);
+        setCourseLoading(false);
+        return;
+      }
+      const rows = asRecordList(res.data);
+      const mapped = rows.map(mapCourseOption).filter((c) => !!c.id);
+      setCourseOptions(mapped);
+      setCourseLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (courseOptions.length === 0) return;
+    if (initialCourseId && courseOptions.some((c) => c.id === initialCourseId)) {
+      setCourseId(initialCourseId);
+      return;
+    }
+    if (!courseId || !courseOptions.some((c) => c.id === courseId)) {
+      setCourseId(courseOptions[0]?.id ?? "");
+    }
+  }, [initialCourseId, courseOptions, courseId]);
+
+  useEffect(() => {
+    if (!program) {
+      setSelectedCourseDetail(null);
+      return;
+    }
+    let active = true;
+    setSelectedCourseDetail(null);
+    void getCourseById(program.courseCode).then((res) => {
+      if (!active || !res.ok) return;
+      const detailRaw =
+        (res.data && typeof res.data === "object"
+          ? (res.data as Record<string, unknown>)
+          : null) ?? asRecordList(res.data)[0];
+      if (!detailRaw) return;
+      const mapped = mapCourseOption(detailRaw, 0);
+      setSelectedCourseDetail({
+        ...mapped,
+        id: program.id,
+        courseCode: program.courseCode,
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, [program]);
 
   useEffect(() => {
     const first = paymentOptions[0]?.id ?? "";
@@ -166,7 +278,12 @@ export function EnrollForm({ initialCourseId }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validateForm()) return;
-    if (!program || !selectedPayment || !consentMarketing || !consentTerms) {
+    if (
+      !effectiveProgram ||
+      !selectedPayment ||
+      !consentMarketing ||
+      !consentTerms
+    ) {
       return;
     }
 
@@ -176,8 +293,8 @@ export function EnrollForm({ initialCourseId }: Props) {
       setPaymentBusy(true);
       try {
         const result = await runRazorpayPaymentFlow({
-          courseId: program.apiCourseId,
-          batchId: program.defaultBatchId,
+          courseId: effectiveProgram.apiCourseId,
+          batchId: effectiveProgram.defaultBatchId,
         });
         if (result.ok) {
           setSubmitted(true);
@@ -200,10 +317,12 @@ export function EnrollForm({ initialCourseId }: Props) {
     setSubmitted(true);
   }
 
-  if (PROGRAM_CATALOG.length === 0) {
+  if (!courseLoading && courseOptions.length === 0) {
     return (
       <p className="text-sm text-slate-600">
-        No programs are available yet.{" "}
+        {courseLoadError
+          ? `Unable to load courses: ${courseLoadError}`
+          : "No courses are available yet."}{" "}
         <Link href="/" className="font-semibold text-cyan-700 hover:text-cyan-600">
           Return home
         </Link>
@@ -221,7 +340,7 @@ export function EnrollForm({ initialCourseId }: Props) {
           </p>
           <p className="mt-2 text-sm text-cyan-900">
             We received your enrollment request for{" "}
-            <span className="font-semibold">{program?.title}</span> with{" "}
+            <span className="font-semibold">{effectiveProgram?.title}</span> with{" "}
             <span className="font-semibold">{selectedPayment?.label}</span> (
             {selectedPayment?.amountDisplay}) via{" "}
             <span className="font-semibold">
@@ -379,21 +498,24 @@ export function EnrollForm({ initialCourseId }: Props) {
             </label>
             <SelectField
               className="relative mt-2"
-              selectClassName={selectClass}
+              selectClassName={`${selectClass} disabled:opacity-50`}
               id="enroll-course"
               value={courseId}
               onChange={(e) => {
                 setCourseId(e.target.value);
                 setErrors((prev) => ({ ...prev, course: "" }));
               }}
+              disabled={courseLoading || courseOptions.length === 0}
               required
             >
-              {PROGRAM_CATALOG.map((p) => (
+              <option value="" disabled>
+                {courseLoading ? "Loading courses..." : "Select course"}
+              </option>
+              {courseOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
                 </option>
               ))}
-              <option value="other">Other</option>
             </SelectField>
             {errors.course ? (
               <p className="mt-1 text-xs text-red-600">{errors.course}</p>
@@ -666,7 +788,7 @@ export function EnrollForm({ initialCourseId }: Props) {
             </Link>
             <button
               type="submit"
-              disabled={!program || !selectedPayment || paymentBusy}
+              disabled={!effectiveProgram || !selectedPayment || paymentBusy}
               className="order-1 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:order-2"
             >
               {paymentBusy

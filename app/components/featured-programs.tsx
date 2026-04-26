@@ -1,7 +1,27 @@
+"use client";
+
 import Link from "next/link";
-import { PROGRAM_CATALOG } from "@/lib/program-catalog";
+import { useEffect, useState } from "react";
+import { asRecordList } from "@/lib/api-normalize";
+import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import { getPublishedCourses } from "@/lib/course-service";
+import type { Program } from "@/lib/program-catalog";
 
 export default function FeaturedPrograms() {
+  const [programs, setPrograms] = useState<Program[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void getPublishedCourses().then((res) => {
+      if (!active || !res.ok) return;
+      const rows = asRecordList(res.data);
+      setPrograms(rows.map((row) => mapCourseToProgram(row)));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <section
       id="courses"
@@ -21,7 +41,7 @@ export default function FeaturedPrograms() {
         </div>
 
         <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-10">
-          {PROGRAM_CATALOG.map((program) => {
+          {programs.map((program) => {
             const programHref = `/courses/${program.id}`;
             const enrollHref = `/enroll?course=${encodeURIComponent(program.id)}`;
             const coverSrc = program.cardCoverImage?.trim() ?? "";

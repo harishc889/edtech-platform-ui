@@ -1,39 +1,75 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import CourseDetailShowcase from "@/app/components/course-detail-showcase";
-import { PROGRAM_CATALOG, getProgramById } from "@/lib/program-catalog";
+import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import { getCourseById } from "@/lib/course-service";
+import type { Program } from "@/lib/program-catalog";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return PROGRAM_CATALOG.map((p) => ({ slug: p.id }));
-}
+export default function CourseDetailPage({ params }: PageProps) {
+  const [slug, setSlug] = useState<string>("");
+  const [course, setCourse] = useState<Program | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const course = getProgramById(slug);
-  if (!course) {
-    return { title: "Course | EdTech Academy" };
-  }
-  return {
-    title: `${course.title} | EdTech Academy`,
-    description: course.subtitle,
-  };
-}
+  useEffect(() => {
+    let active = true;
+    void params.then((p) => {
+      if (!active) return;
+      setSlug(p.slug);
+    });
+    return () => {
+      active = false;
+    };
+  }, [params]);
 
-export default async function CourseDetailPage({ params }: PageProps) {
-  const { slug } = await params;
-  const course = getProgramById(slug);
-  if (!course) notFound();
+  useEffect(() => {
+    if (!slug) return;
+    let active = true;
+    setLoading(true);
+    setError(null);
+    void getCourseById(slug).then((res) => {
+      if (!active) return;
+      if (!res.ok) {
+        setError(res.message);
+        setLoading(false);
+        return;
+      }
+      const body =
+        res.data && typeof res.data === "object"
+          ? (res.data as Record<string, unknown>)
+          : null;
+      if (!body) {
+        setError("Course details are unavailable.");
+        setLoading(false);
+        return;
+      }
+      setCourse(mapCourseToProgram(body, slug));
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [slug]);
 
-  const enrollHref = `/enroll?course=${encodeURIComponent(course.id)}`;
-  const courseFeeInr = new Intl.NumberFormat("en-IN").format(course.upfrontInr);
-  const durationHours = course.hours;
+  const enrollHref = useMemo(
+    () => `/enroll?course=${encodeURIComponent(course?.id ?? slug)}`,
+    [course?.id, slug],
+  );
+  const courseFeeInr = useMemo(
+    () =>
+      new Intl.NumberFormat("en-IN").format(
+        course?.upfrontInr && Number.isFinite(course.upfrontInr)
+          ? course.upfrontInr
+          : 0,
+      ),
+    [course?.upfrontInr],
+  );
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
@@ -46,11 +82,19 @@ export default async function CourseDetailPage({ params }: PageProps) {
             ← Featured courses
           </Link>
         </nav>
-        <CourseDetailShowcase
-          course={course}
-          enrollHref={enrollHref}
-          courseFeeInr={courseFeeInr}
-        />
+        {loading ? (
+          <p className="text-sm text-slate-600">Loading course details...</p>
+        ) : null}
+        {error ? (
+          <p className="text-sm text-red-600">{error}</p>
+        ) : null}
+        {course && !loading ? (
+          <CourseDetailShowcase
+            course={course}
+            enrollHref={enrollHref}
+            courseFeeInr={courseFeeInr}
+          />
+        ) : null}
       </div>
     </main>
   );
