@@ -9,6 +9,16 @@ type Props = {
   course: Program;
   enrollHref: string;
   courseFeeInr: string;
+  batches: Array<{
+    id: number;
+    mentorName: string;
+    startDate: string;
+    endDate: string;
+    capacity: number;
+  }>;
+  batchesLoading: boolean;
+  selectedBatchId: number | null;
+  onSelectBatch: (batchId: number) => void;
 };
 
 function escapeHtml(value: string) {
@@ -52,6 +62,10 @@ export default function CourseDetailShowcase({
   course,
   enrollHref,
   courseFeeInr,
+  batches,
+  batchesLoading,
+  selectedBatchId,
+  onSelectBatch,
 }: Props) {
   const [expandedModule, setExpandedModule] = useState<number>(0);
   const toolItems = useMemo(() => {
@@ -90,18 +104,17 @@ export default function CourseDetailShowcase({
     course.modules.length,
     course.title,
   ]);
-  const stats = useMemo(
-    () => [
-      { title: "Course Duration", value: `${course.duration} (${course.hours})` },
-      { title: "Internship Duration", value: `${course.internshipDuration} (${course.internshipHours})` },
-      { title: "Modules", value: `${course.modules.length}` },
-      { title: "Assessments", value: `${course.assessments}` },
-      { title: "Language", value: course.language },
-      { title: "Mode", value: course.mode },
-
-    ],
-    [course.duration, course.hours, course.internshipDuration, course.internshipHours, course.language, course.modules.length, course.careerRoles.length],
-  );
+  const stats = [
+    { title: "Course Duration", value: `${course.duration} (${course.hours})` },
+    {
+      title: "Internship Duration",
+      value: `${course.internshipDuration} (${course.internshipHours})`,
+    },
+    { title: "Modules", value: `${course.modules.length}` },
+    { title: "Assessments", value: `${course.assessments}` },
+    { title: "Language", value: course.language },
+    { title: "Mode", value: course.mode },
+  ];
 
   const seatBookingDisplay = useMemo(
     () => new Intl.NumberFormat("en-IN").format(course.seatBookingInr),
@@ -115,6 +128,18 @@ export default function CourseDetailShowcase({
       })),
     [course.upfrontInr],
   );
+  const hasBatches = batches.length > 0;
+
+  function formatBatchDate(value: string) {
+    if (!value) return "TBA";
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return "TBA";
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(dt);
+  }
 
   return (
     <article className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50">
@@ -174,6 +199,62 @@ export default function CourseDetailShowcase({
             <p className="mt-2 text-xl font-bold text-slate-900">{item.value}</p>
           </div>
         ))}
+      </section>
+
+      <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-6 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+            Upcoming Batches
+          </p>
+          <h2 className="font-display mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+            Choose your start date and mentor
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            In edtech, enrollment usually happens per cohort. Pick the batch that best matches your
+            schedule.
+          </p>
+
+          {batchesLoading ? (
+            <p className="mt-5 text-sm text-slate-500">Loading batches...</p>
+          ) : null}
+
+          {!batchesLoading && !hasBatches ? (
+            <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              No active batch is listed yet. You can still proceed and our counselor will assign the
+              nearest available intake.
+            </p>
+          ) : null}
+
+          {hasBatches ? (
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
+              {batches.map((batch) => {
+                const isSelected = selectedBatchId === batch.id;
+                return (
+                  <button
+                    key={batch.id}
+                    type="button"
+                    onClick={() => onSelectBatch(batch.id)}
+                    className={`rounded-2xl border p-4 text-left transition ${isSelected
+                      ? "border-sky-400 bg-white shadow-md shadow-sky-100"
+                      : "border-slate-200 bg-white/80 hover:border-slate-300"
+                      }`}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      Batch #{batch.id}
+                    </p>
+                    <p className="mt-1 text-base font-bold text-slate-900">{batch.mentorName}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {formatBatchDate(batch.startDate)} - {formatBatchDate(batch.endDate)}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-sky-800">
+                      Capacity: {batch.capacity > 0 ? batch.capacity : "TBA"} seats
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
       </section>
 
       {/* <section className="grid gap-8 border-t border-slate-100 px-6 py-10 sm:px-10 lg:grid-cols-[1.1fr_1fr]">

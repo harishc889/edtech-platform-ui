@@ -12,6 +12,7 @@ import { SelectField } from "@/app/components/select-field";
 import {
   type PaymentOption,
 } from "@/lib/program-catalog";
+import { getBatchesForCourse } from "@/lib/batch-service";
 import { getCourseById, getPublishedCourses } from "@/lib/course-service";
 import {
   RAZORPAY_CHECKOUT_SCRIPT,
@@ -42,6 +43,8 @@ const selectClass = authSelectClass;
 type Props = {
   /** From URL ?course= — must match a program id */
   initialCourseId?: string;
+  /** From URL ?batch= — preferred batch id */
+  initialBatchId?: string;
 };
 
 type CourseOption = {
@@ -52,6 +55,14 @@ type CourseOption = {
   seatBookingInr: number;
   apiCourseId: number;
   defaultBatchId: number;
+};
+
+type BatchOption = {
+  id: number;
+  mentorName: string;
+  startDate: string;
+  endDate: string;
+  capacity: number;
 };
 
 function toNumber(value: unknown, fallback = 0): number {
@@ -103,7 +114,22 @@ function mapCourseOption(raw: Record<string, unknown>, index: number): CourseOpt
   };
 }
 
-export function EnrollForm({ initialCourseId }: Props) {
+function mapBatchOption(raw: Record<string, unknown>, index: number): BatchOption {
+  const id = toNumber(raw.id ?? raw.batchId, index + 1);
+  const mentorName =
+    typeof raw.mentorName === "string" && raw.mentorName.trim()
+      ? raw.mentorName.trim()
+      : "Faculty will be assigned";
+  return {
+    id,
+    mentorName,
+    startDate: typeof raw.startDate === "string" ? raw.startDate : "",
+    endDate: typeof raw.endDate === "string" ? raw.endDate : "",
+    capacity: toNumber(raw.capacity, 0),
+  };
+}
+
+export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
   const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
   const [courseLoading, setCourseLoading] = useState(true);
   const [courseLoadError, setCourseLoadError] = useState<string | null>(null);
@@ -131,6 +157,10 @@ export function EnrollForm({ initialCourseId }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [batchOptions, setBatchOptions] = useState<BatchOption[]>([]);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchLoadError, setBatchLoadError] = useState<string | null>(null);
+  const [batchId, setBatchId] = useState(initialBatchId ?? "");
   const [selectedCourseDetail, setSelectedCourseDetail] =
     useState<CourseOption | null>(null);
   const countryOptions = useMemo(
@@ -236,6 +266,9 @@ export function EnrollForm({ initialCourseId }: Props) {
   useEffect(() => {
     if (!program) {
       setSelectedCourseDetail(null);
+      setBatchOptions([]);
+      setBatchId("");
+      setBatchLoadError(null);
       return;
     }
     let active = true;
@@ -260,6 +293,48 @@ export function EnrollForm({ initialCourseId }: Props) {
   }, [program]);
 
   useEffect(() => {
+    if (!effectiveProgram?.apiCourseId) {
+      setBatchOptions([]);
+      setBatchLoadError(null);
+      return;
+    }
+    let active = true;
+    setBatchLoading(true);
+    setBatchLoadError(null);
+    void getBatchesForCourse(effectiveProgram.apiCourseId).then((res) => {
+      if (!active) return;
+      if (!res.ok) {
+        setBatchOptions([]);
+        setBatchLoadError(res.message);
+        setBatchLoading(false);
+        return;
+      }
+      const mapped = asRecordList(res.data)
+        .map(mapBatchOption)
+        .filter((batch) => Number.isFinite(batch.id));
+      setBatchOptions(mapped);
+      setBatchLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [effectiveProgram?.apiCourseId]);
+
+  useEffect(() => {
+    if (batchOptions.length === 0) {
+      setBatchId("");
+      return;
+    }
+    if (initialBatchId && batchOptions.some((b) => String(b.id) === initialBatchId)) {
+      setBatchId(initialBatchId);
+      return;
+    }
+    if (!batchId || !batchOptions.some((b) => String(b.id) === batchId)) {
+      setBatchId(String(batchOptions[0].id));
+    }
+  }, [batchOptions, batchId, initialBatchId]);
+
+  useEffect(() => {
     const first = paymentOptions[0]?.id ?? "";
     setPaymentId((prev) => {
       if (paymentOptions.some((p) => p.id === prev)) return prev;
@@ -277,6 +352,19 @@ export function EnrollForm({ initialCourseId }: Props) {
   }, [termsOpen]);
 
   const selectedPayment = paymentOptions.find((p) => p.id === paymentId);
+  const selectedBatch = batchOptions.find((b) => String(b.id) === batchId) ?? null;
+  const selectedBatchId = selectedBatch?.id ?? effectiveProgram?.defaultBatchId ?? null;
+
+  function formatBatchDate(value: string) {
+    if (!value) return "TBA";
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return "TBA";
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(dt);
+  }
 
   function validateForm() {
     const nextErrors: Record<string, string> = {};
@@ -294,6 +382,9 @@ export function EnrollForm({ initialCourseId }: Props) {
     }
     // Designation field is optional / hidden in the current layout — do not block submit.
     if (!courseId.trim()) nextErrors.course = "Course is required.";
+    if (batchOptions.length > 0 && !batchId.trim()) {
+      nextErrors.batch = "Please select a batch.";
+    }
     if (!country.trim()) nextErrors.country = "Country is required.";
     if (isIndia) {
       if (!stateValue.trim()) nextErrors.state = "State is required.";
@@ -310,6 +401,7 @@ export function EnrollForm({ initialCourseId }: Props) {
     if (
       !effectiveProgram ||
       !selectedPayment ||
+      !selectedBatchId ||
       !consentMarketing ||
       !consentTerms
     ) {
@@ -323,7 +415,7 @@ export function EnrollForm({ initialCourseId }: Props) {
       try {
         const result = await runRazorpayPaymentFlow({
           courseId: effectiveProgram.apiCourseId,
-          batchId: effectiveProgram.defaultBatchId,
+          batchId: selectedBatchId,
         });
         if (result.ok) {
           setSubmitted(true);
@@ -370,6 +462,11 @@ export function EnrollForm({ initialCourseId }: Props) {
           <p className="mt-2 text-sm text-cyan-900">
             We received your enrollment request for{" "}
             <span className="font-semibold">{effectiveProgram?.title}</span> with{" "}
+            {selectedBatch ? (
+              <>
+                <span className="font-semibold">Batch #{selectedBatch.id}</span>,{" "}
+              </>
+            ) : null}
             <span className="font-semibold">{selectedPayment?.label}</span> (
             {selectedPayment?.amountDisplay}) via{" "}
             <span className="font-semibold">
@@ -548,6 +645,56 @@ export function EnrollForm({ initialCourseId }: Props) {
             </SelectField>
             {errors.course ? (
               <p className="mt-1 text-xs text-red-600">{errors.course}</p>
+            ) : null}
+          </div>
+
+          <div>
+            <label
+              htmlFor="enroll-batch"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Batch *
+            </label>
+            <SelectField
+              className="relative mt-2"
+              selectClassName={`${selectClass} disabled:opacity-50`}
+              id="enroll-batch"
+              value={batchId}
+              onChange={(e) => {
+                setBatchId(e.target.value);
+                setErrors((prev) => ({ ...prev, batch: "" }));
+              }}
+              disabled={!effectiveProgram || batchLoading || batchOptions.length === 0}
+              required
+            >
+              <option value="" disabled>
+                {batchLoading
+                  ? "Loading batches..."
+                  : batchOptions.length === 0
+                    ? "No active batches"
+                    : "Select batch"}
+              </option>
+              {batchOptions.map((batch) => (
+                <option key={batch.id} value={String(batch.id)}>
+                  Batch #{batch.id} - {formatBatchDate(batch.startDate)} to{" "}
+                  {formatBatchDate(batch.endDate)} - {batch.mentorName}
+                </option>
+              ))}
+            </SelectField>
+            {selectedBatch ? (
+              <p className="mt-1 text-xs text-slate-500">
+                Mentor:{" "}
+                <span className="font-semibold text-slate-700">
+                  {selectedBatch.mentorName}
+                </span>{" "}
+                · Capacity: {selectedBatch.capacity > 0 ? selectedBatch.capacity : "TBA"}
+              </p>
+            ) : null}
+            {errors.batch ? (
+              <p className="mt-1 text-xs text-red-600">{errors.batch}</p>
+            ) : null}
+            {batchLoadError ? (
+              <p className="mt-1 text-xs text-red-600">{batchLoadError}</p>
             ) : null}
           </div>
 
@@ -858,7 +1005,7 @@ export function EnrollForm({ initialCourseId }: Props) {
             </Link>
             <button
               type="submit"
-              disabled={!effectiveProgram || !selectedPayment || paymentBusy}
+              disabled={!effectiveProgram || !selectedPayment || !selectedBatchId || paymentBusy}
               className="order-1 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:order-2"
             >
               {paymentBusy
