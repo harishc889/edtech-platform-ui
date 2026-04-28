@@ -3,27 +3,75 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import CourseCard from "@/app/components/course-card";
 import { asRecordList } from "@/lib/api-normalize";
 import { getBatchesForCourse } from "@/lib/batch-service";
+import { mapCourseToProgram } from "@/lib/course-program-adapter";
 import { getCourseById, getPublishedCourses } from "@/lib/course-service";
 import { enrollInBatch } from "@/lib/enroll-service";
 
+type NextBatchPreview = {
+  id: number;
+  startDate: string;
+  capacity: number;
+};
+
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function formatBatchDate(value: string) {
+  if (!value) return "TBA";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "TBA";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(dt);
+}
+
+function pickNearestBatch(rows: Record<string, unknown>[]): NextBatchPreview | null {
+  if (rows.length === 0) return null;
+  const now = Date.now();
+  const parsed = rows
+    .map((row, idx) => {
+      const id = toNumber(row.id ?? row.batchId, idx + 1);
+      const startDateRaw =
+        typeof row.startDate === "string" ? row.startDate : String(row.startDate ?? "");
+      const timestamp = startDateRaw ? new Date(startDateRaw).getTime() : Number.NaN;
+      const capacity = toNumber(row.capacity, 0);
+      return { id, startDate: startDateRaw, timestamp, capacity };
+    })
+    .filter((item) => Number.isFinite(item.id));
+  if (parsed.length === 0) return null;
+  const upcoming = parsed
+    .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= now)
+    .sort((a, b) => a.timestamp - b.timestamp);
+  const fallback = parsed
+    .filter((item) => Number.isFinite(item.timestamp))
+    .sort((a, b) => a.timestamp - b.timestamp);
+  const best = upcoming[0] ?? fallback[0] ?? parsed[0];
+  return { id: best.id, startDate: best.startDate, capacity: best.capacity };
+}
+
 function mapCourseCard(raw: Record<string, unknown>, index: number) {
   const id = String(raw.id ?? index);
-  const title = String(raw.title ?? raw.name ?? "Untitled course");
-  const price =
-    raw.price != null && raw.price !== ""
-      ? String(raw.price)
-      : raw.priceUsd != null
-        ? String(raw.priceUsd)
-        : "—";
-  const duration =
-    typeof raw.duration === "string" && raw.duration
-      ? raw.duration
-      : typeof raw.durationWeeks === "number"
-        ? `${raw.durationWeeks} weeks`
-        : "—";
-  return { id, title, price, duration };
+  const program = mapCourseToProgram(raw, id);
+  return {
+    id,
+    title: program.title,
+    subtitle: program.subtitle,
+    duration: program.duration,
+    eligibility: program.eligibility,
+    cardCoverImage: program.cardCoverImage,
+    apiCourseId: program.apiCourseId,
+  };
 }
 
 export default function CoursesCatalog() {
@@ -35,6 +83,9 @@ export default function CoursesCatalog() {
   );
   const [listError, setListError] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(true);
+  const [nextBatchByCourseId, setNextBatchByCourseId] = useState<
+    Record<string, NextBatchPreview>
+  >({});
 
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -48,6 +99,7 @@ export default function CoursesCatalog() {
 
   useEffect(() => {
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setListLoading(true);
     setListError(null);
     void getPublishedCourses().then((res) => {
@@ -66,6 +118,32 @@ export default function CoursesCatalog() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (courses.length === 0) return;
+    let active = true;
+    void Promise.all(
+      courses.map(async (course) => {
+        if (!course.apiCourseId) return { courseId: course.id, nextBatch: null };
+        const res = await getBatchesForCourse(course.apiCourseId);
+        if (!res.ok) return { courseId: course.id, nextBatch: null };
+        return {
+          courseId: course.id,
+          nextBatch: pickNearestBatch(asRecordList(res.data)),
+        };
+      }),
+    ).then((results) => {
+      if (!active) return;
+      const mapped: Record<string, NextBatchPreview> = {};
+      results.forEach((entry) => {
+        if (entry.nextBatch) mapped[entry.courseId] = entry.nextBatch;
+      });
+      setNextBatchByCourseId(mapped);
+    });
+    return () => {
+      active = false;
+    };
+  }, [courses]);
 
   const loadDetail = useCallback(async (courseId: string) => {
     setDetailLoading(true);
@@ -101,6 +179,7 @@ export default function CoursesCatalog() {
 
   useEffect(() => {
     if (!selectedId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDetailRecord(null);
       setBatches([]);
       setDetailError(null);
@@ -153,41 +232,26 @@ export default function CoursesCatalog() {
 
         <section className="mt-12">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <article
-                key={course.id}
-                className="group flex h-full flex-col rounded-3xl border border-slate-200/80 bg-white p-8 shadow-md transition duration-300 hover:-translate-y-1 hover:border-cyan-200/80 hover:shadow-xl hover:shadow-cyan-500/10"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <h2 className="font-display text-xl font-bold text-slate-900 transition group-hover:text-cyan-800">
-                    {course.title}
-                  </h2>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                    {course.duration}
-                  </span>
-                </div>
-
-                <div className="mt-6 flex flex-wrap gap-4 text-sm text-slate-600">
-                  <div>
-                    <span className="font-bold text-slate-800">Price</span>
-                    <p className="mt-0.5 text-slate-600">{course.price}</p>
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-800">Duration</span>
-                    <p className="mt-0.5 text-slate-600">{course.duration}</p>
-                  </div>
-                </div>
-
-                <div className="mt-8 flex flex-1 items-end">
-                  <Link
-                    href={`/courses?course=${encodeURIComponent(course.id)}`}
-                    className="flex w-full items-center justify-center rounded-full bg-slate-900 py-3.5 text-center text-sm font-bold text-white transition hover:bg-slate-800"
-                  >
-                    View details
-                  </Link>
-                </div>
-              </article>
-            ))}
+            {courses.map((course) => {
+              const nextBatch = nextBatchByCourseId[course.id];
+              return (
+                <CourseCard
+                  key={course.id}
+                  title={course.title}
+                  subtitle={course.subtitle}
+                  duration={course.duration}
+                  eligibility={course.eligibility}
+                  nextBatchLabel={
+                    nextBatch
+                      ? `${formatBatchDate(nextBatch.startDate)} · ${nextBatch.capacity > 0 ? `${nextBatch.capacity} seats` : "Seats TBA"}`
+                      : "Announcing soon"
+                  }
+                  cardCoverImage={course.cardCoverImage}
+                  programHref={`/courses/${encodeURIComponent(course.id)}`}
+                  enrollHref={`/enroll?course=${encodeURIComponent(course.id)}${nextBatch ? `&batch=${encodeURIComponent(String(nextBatch.id))}` : ""}`}
+                />
+              );
+            })}
           </div>
         </section>
 
