@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   RAZORPAY_CHECKOUT_SCRIPT,
   runRazorpayPaymentFlow,
@@ -33,8 +33,11 @@ export default function PayForCourseButton({
   const [razorpayScriptReady, setRazorpayScriptReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isProcessingRef = useRef(false);
 
   const runPayment = useCallback(async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setError(null);
     setBusy(true);
     try {
@@ -46,12 +49,14 @@ export default function PayForCourseButton({
       }
     } finally {
       setBusy(false);
+      isProcessingRef.current = false;
     }
   }, [batchId, courseId, onSuccess]);
 
   const canClick =
     !disabled &&
     !busy &&
+    !isProcessingRef.current &&
     razorpayScriptReady &&
     Number.isFinite(courseId) &&
     Number.isFinite(batchId);

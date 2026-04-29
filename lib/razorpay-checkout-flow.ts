@@ -47,6 +47,30 @@ export type RazorpayFlowResult =
   | { ok: true }
   | { ok: false; message: string };
 
+let paymentFlowInFlight = false;
+
+function formatRazorpayFailureMessage(error: {
+  code?: string;
+  description?: string;
+  reason?: string;
+  source?: string;
+  step?: string;
+  metadata?: { order_id?: string; payment_id?: string };
+}) {
+  const parts = [
+    error.description,
+    error.reason ? `Reason: ${error.reason}` : null,
+    error.code ? `Code: ${error.code}` : null,
+    error.step ? `Step: ${error.step}` : null,
+    error.source ? `Source: ${error.source}` : null,
+    error.metadata?.order_id ? `Order: ${error.metadata.order_id}` : null,
+    error.metadata?.payment_id ? `Payment: ${error.metadata.payment_id}` : null,
+  ].filter((part): part is string => !!part && part.trim().length > 0);
+
+  if (parts.length > 0) return parts.join(" | ");
+  return "Payment failed. Please try again.";
+}
+
 /**
  * CSRF → create-order → Razorpay modal → CSRF → verify.
  * Call after form validation; requests go through Next BFF (`/api/backend/...`).
@@ -56,6 +80,13 @@ export async function runRazorpayPaymentFlow(params: {
   batchId: number;
 }): Promise<RazorpayFlowResult> {
   const { courseId, batchId } = params;
+  if (paymentFlowInFlight) {
+    return {
+      ok: false,
+      message: "A payment is already being processed. Please wait.",
+    };
+  }
+  paymentFlowInFlight = true;
 
   try {
     await ensureRazorpayLoaded();
@@ -89,6 +120,12 @@ export async function runRazorpayPaymentFlow(params: {
       { courseId, batchId },
       csrf1.data ?? null,
     );
+    console.info("createPaymentOrder result", {
+      ok: order.ok,
+      status: order.status,
+      data: order.ok ? order.data : undefined,
+      error: !order.ok ? order.error : undefined,
+    });
     if (!order.ok || !order.data) {
       return {
         ok: false,
@@ -117,6 +154,14 @@ export async function runRazorpayPaymentFlow(params: {
         settled = true;
         resolve(result);
       };
+
+      console.info("Creating Razorpay checkout", {
+        orderId,
+        amountPaise,
+        currency,
+        courseId,
+        batchId,
+      });
 
       const rzp = new window.Razorpay!({
         key: keyId,
@@ -148,6 +193,12 @@ export async function runRazorpayPaymentFlow(params: {
                 },
                 csrf2.data ?? null,
               );
+              console.info("verifyPayment result", {
+                ok: verified.ok,
+                status: verified.status,
+                data: verified.ok ? verified.data : undefined,
+                error: !verified.ok ? verified.error : undefined,
+              });
 
               if (!verified.ok) {
                 done({
@@ -174,6 +225,7 @@ export async function runRazorpayPaymentFlow(params: {
         },
         modal: {
           ondismiss() {
+            console.info("Razorpay checkout dismissed by user", { orderId });
             done({ ok: false, message: "Payment was cancelled." });
           },
         },
@@ -181,14 +233,37 @@ export async function runRazorpayPaymentFlow(params: {
 
       rzp.on("payment.failed", (...args: unknown[]) => {
         const response = args[0] as
-          | { error?: { description?: string } }
+          | {
+              error?: {
+                code?: string;
+                description?: string;
+                reason?: string;
+                source?: string;
+                step?: string;
+                metadata?: { order_id?: string; payment_id?: string };
+              };
+            }
           | undefined;
-        const msg =
-          response?.error?.description ?? "Payment failed. Please try again.";
+        const errorInfo = response?.error;
+        if (errorInfo) {
+          // Useful for debugging test/live key mismatch, payment method failures, etc.
+          console.error("Razorpay payment.failed", errorInfo);
+        }
+        const msg = errorInfo
+          ? formatRazorpayFailureMessage(errorInfo)
+          : "Payment failed. Please try again.";
         done({ ok: false, message: msg });
       });
 
-      rzp.open();
+      try {
+        rzp.open();
+      } catch (error) {
+        console.error("Failed to open Razorpay checkout", error);
+        done({
+          ok: false,
+          message: "Unable to launch payment checkout. Please retry.",
+        });
+      }
     });
 
     return checkoutResult;
@@ -198,5 +273,7 @@ export async function runRazorpayPaymentFlow(params: {
       message:
         e instanceof Error ? e.message : "Something went wrong. Try again.",
     };
+  } finally {
+    paymentFlowInFlight = false;
   }
 }
