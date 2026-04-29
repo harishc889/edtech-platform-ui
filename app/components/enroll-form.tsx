@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Script from "next/script";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { asRecordList } from "@/lib/api-normalize";
 import { City, Country, State as GeoState } from "country-state-city";
 import {
@@ -157,6 +157,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const isProcessingRef = useRef(false);
   const [batchOptions, setBatchOptions] = useState<BatchOption[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchLoadError, setBatchLoadError] = useState<string | null>(null);
@@ -397,6 +398,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isProcessingRef.current) return;
     if (!validateForm()) return;
     if (
       !effectiveProgram ||
@@ -411,6 +413,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
     setPaymentError(null);
 
     if (paymentGateway === "razorpay") {
+      isProcessingRef.current = true;
       setPaymentBusy(true);
       try {
         const result = await runRazorpayPaymentFlow({
@@ -424,6 +427,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
         }
       } finally {
         setPaymentBusy(false);
+        isProcessingRef.current = false;
       }
       return;
     }
