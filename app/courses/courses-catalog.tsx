@@ -65,6 +65,7 @@ function mapCourseCard(raw: Record<string, unknown>, index: number) {
   const program = mapCourseToProgram(raw, id);
   return {
     id,
+    courseCode: program.id,
     title: program.title,
     subtitle: program.subtitle,
     duration: program.duration,
@@ -145,16 +146,19 @@ export default function CoursesCatalog() {
     };
   }, [courses]);
 
-  const loadDetail = useCallback(async (courseId: string) => {
+  const loadDetail = useCallback(async (courseCode: string, apiCourseId?: number) => {
     setDetailLoading(true);
     setDetailError(null);
     setDetailRecord(null);
     setBatches([]);
     setEnrollMessage(null);
 
+    const batchCourseId = Number.isFinite(apiCourseId) && (apiCourseId ?? 0) > 0
+      ? String(apiCourseId)
+      : courseCode;
     const [courseRes, batchRes] = await Promise.all([
-      getCourseById(courseId),
-      getBatchesForCourse(courseId),
+      getCourseById(courseCode),
+      getBatchesForCourse(batchCourseId),
     ]);
 
     if (!courseRes.ok) {
@@ -186,8 +190,21 @@ export default function CoursesCatalog() {
       setEnrollMessage(null);
       return;
     }
-    void loadDetail(selectedId);
-  }, [selectedId, loadDetail]);
+    if (courses.length === 0) return;
+    const selectedCourse =
+      courses.find((course) => course.id === selectedId) ??
+      courses.find((course) => String(course.apiCourseId) === selectedId) ??
+      null;
+    const courseCode = selectedCourse?.courseCode ?? selectedId;
+    if (!selectedCourse && /^\d+$/.test(courseCode)) return;
+    const apiCourseId =
+      selectedCourse?.apiCourseId ??
+      (() => {
+        const n = Number(selectedId);
+        return Number.isFinite(n) ? n : undefined;
+      })();
+    void loadDetail(courseCode, apiCourseId);
+  }, [selectedId, loadDetail, courses]);
 
   async function handleEnroll(batchId: number) {
     setEnrollMessage(null);

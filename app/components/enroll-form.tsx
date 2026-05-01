@@ -421,6 +421,16 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
           batchId: selectedBatchId,
         });
         if (result.ok) {
+          window.dispatchEvent(
+            new CustomEvent("enrollment:changed", {
+              detail: {
+                courseId: effectiveProgram.id,
+                courseCode: effectiveProgram.courseCode,
+                courseTitle: effectiveProgram.title,
+                apiCourseId: effectiveProgram.apiCourseId,
+              },
+            }),
+          );
           setSubmitted(true);
         } else {
           setPaymentError(result.message);

@@ -45,7 +45,7 @@ function toBatch(raw: Record<string, unknown>, index: number): CourseBatch {
 }
 
 export default function CourseDetailPage({ params }: PageProps) {
-  const [slug, setSlug] = useState<string>("");
+  const [courseCode, setCourseCode] = useState<string>("");
   const [course, setCourse] = useState<Program | null>(null);
   const [batches, setBatches] = useState<CourseBatch[]>([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
@@ -57,7 +57,7 @@ export default function CourseDetailPage({ params }: PageProps) {
     let active = true;
     void params.then((p) => {
       if (!active) return;
-      setSlug(p.slug);
+      setCourseCode(p.slug);
     });
     return () => {
       active = false;
@@ -65,12 +65,12 @@ export default function CourseDetailPage({ params }: PageProps) {
   }, [params]);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!courseCode) return;
     let active = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
-    void getCourseById(slug).then((res) => {
+    void getCourseById(courseCode).then((res) => {
       if (!active) return;
       if (!res.ok) {
         setError(res.message);
@@ -86,13 +86,13 @@ export default function CourseDetailPage({ params }: PageProps) {
         setLoading(false);
         return;
       }
-      setCourse(mapCourseToProgram(body, slug));
+      setCourse(mapCourseToProgram(body, courseCode));
       setLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [courseCode]);
 
   useEffect(() => {
     if (!course?.apiCourseId) {
@@ -124,8 +124,8 @@ export default function CourseDetailPage({ params }: PageProps) {
 
   const enrollHref = useMemo(
     () =>
-      `/enroll?course=${encodeURIComponent(course?.id ?? slug)}${selectedBatchId ? `&batch=${encodeURIComponent(String(selectedBatchId))}` : ""}`,
-    [course?.id, selectedBatchId, slug],
+      `/enroll?course=${encodeURIComponent(course?.id ?? courseCode)}${selectedBatchId ? `&batch=${encodeURIComponent(String(selectedBatchId))}` : ""}`,
+    [course?.id, selectedBatchId, courseCode],
   );
   const courseFeeInr = new Intl.NumberFormat("en-IN").format(
     course?.upfrontInr && Number.isFinite(course.upfrontInr)

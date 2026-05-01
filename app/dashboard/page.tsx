@@ -13,18 +13,30 @@ import { fetchCurrentUser, type AuthUser } from "@/lib/auth-service";
 import { getBatchesForCourse } from "@/lib/batch-service";
 import { mapCourseToProgram } from "@/lib/course-program-adapter";
 import { getPublishedCourses } from "@/lib/course-service";
+import { getMyEnrolledCourses } from "@/lib/enroll-service";
 
 function mapEnrollmentRow(raw: Record<string, unknown>, index: number) {
-  const courseId = String(
-    raw.courseId ?? raw.course_id ?? raw.id ?? `row-${index}`,
+  const nestedCourse =
+    raw.course && typeof raw.course === "object"
+      ? (raw.course as Record<string, unknown>)
+      : null;
+  const apiCourseId = toNumber(
+    raw.courseId ??
+      raw.course_id ??
+      raw.courseMasterId ??
+      nestedCourse?.id ??
+      nestedCourse?.courseId,
+    Number.NaN,
   );
   const id = String(
-    raw.id ?? raw.enrollmentId ?? raw.batchId ?? courseId,
+    raw.id ?? raw.enrollmentId ?? raw.batchId ?? `row-${index}`,
   );
   const title = String(
     raw.title ??
       raw.courseTitle ??
       raw.courseName ??
+      nestedCourse?.title ??
+      nestedCourse?.name ??
       raw.name ??
       "Course",
   );
@@ -40,8 +52,36 @@ function mapEnrollmentRow(raw: Record<string, unknown>, index: number) {
       : typeof raw.scheduledAt === "string"
         ? raw.scheduledAt
         : "—";
-  return { id, courseId, title, progress, nextSession };
+  const courseCode =
+    typeof raw.courseCode === "string" && raw.courseCode.trim()
+      ? raw.courseCode.trim()
+      : typeof nestedCourse?.courseCode === "string" && nestedCourse.courseCode.trim()
+        ? nestedCourse.courseCode.trim()
+        : typeof raw.slug === "string" && raw.slug.trim()
+          ? raw.slug.trim()
+          : typeof nestedCourse?.slug === "string" && nestedCourse.slug.trim()
+            ? nestedCourse.slug.trim()
+            : typeof raw.code === "string" && raw.code.trim()
+              ? raw.code.trim()
+              : typeof nestedCourse?.code === "string" && nestedCourse.code.trim()
+                ? nestedCourse.code.trim()
+                : "";
+  const courseId =
+    courseCode ||
+    (Number.isFinite(apiCourseId) ? String(apiCourseId) : `row-${index}`);
+  return { id, courseId, apiCourseId, courseCode, title, progress, nextSession };
 }
+
+function normalizeKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+type EnrollmentChangedDetail = {
+  courseId: string;
+  courseCode?: string;
+  courseTitle?: string;
+  apiCourseId?: number;
+};
 
 function certificationsFromMePayload(data: unknown): Record<string, unknown>[] {
   if (!data || typeof data !== "object") return [];
@@ -178,9 +218,49 @@ export default function DashboardPage() {
   const [nextBatchByCourseId, setNextBatchByCourseId] = useState<
     Record<string, NextBatchPreview>
   >({});
+  const [optimisticEnrollmentHints, setOptimisticEnrollmentHints] = useState<
+    EnrollmentChangedDetail[]
+  >([]);
+  const [refreshEnrollmentsTick, setRefreshEnrollmentsTick] = useState(0);
   const enrolledCourseKeys = new Set(
-    enrolledCourses.flatMap((course) => [course.courseId, String(Number(course.courseId))]),
+    enrolledCourses.flatMap((course) => {
+      const normalizedCode = normalizeKey(course.courseCode);
+      const normalizedTitle = normalizeKey(course.title);
+      const normalizedCourseId = normalizeKey(course.courseId);
+      return [
+        course.courseId,
+        String(Number(course.courseId)),
+        normalizedCourseId,
+        normalizedCode,
+        normalizedTitle,
+        Number.isFinite(course.apiCourseId) ? String(course.apiCourseId) : "",
+      ];
+    }),
   );
+  useEffect(() => {
+    function handleEnrollmentChanged(event: Event) {
+      const customEvent = event as CustomEvent<EnrollmentChangedDetail | undefined>;
+      const detail = customEvent.detail;
+      if (detail && typeof detail.courseId === "string" && detail.courseId.trim()) {
+        setOptimisticEnrollmentHints((prev) => {
+          const next = prev.filter((item) => item.courseId !== detail.courseId);
+          return [...next, detail];
+        });
+      }
+      setRefreshEnrollmentsTick((v) => v + 1);
+    }
+    function handleVisibilityOrFocus() {
+      setRefreshEnrollmentsTick((v) => v + 1);
+    }
+    window.addEventListener("enrollment:changed", handleEnrollmentChanged);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    return () => {
+      window.removeEventListener("enrollment:changed", handleEnrollmentChanged);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
+  }, []);
   useEffect(() => {
     let active = true;
 
@@ -196,8 +276,41 @@ export default function DashboardPage() {
       const payload = response.data;
       const profile = profileFromMePayload(payload) as AuthUser | null;
       setCurrentUser(profile);
-      const rows = enrollmentsFromMePayload(payload);
-      setEnrolledCourses(rows.map(mapEnrollmentRow));
+      const meRows = enrollmentsFromMePayload(payload);
+      const fallbackResponse = await getMyEnrolledCourses();
+      if (!active) return;
+      const fallbackRows = fallbackResponse.ok
+        ? asRecordList(fallbackResponse.data)
+        : [];
+      const mergedRows = [...meRows, ...fallbackRows];
+      const mapped = mergedRows.map(mapEnrollmentRow);
+      const seen = new Set<string>();
+      const deduped = mapped.filter((course) => {
+        const key = `${course.courseId}|${normalizeKey(course.courseCode)}|${normalizeKey(course.title)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const withOptimisticHints = [...deduped];
+      optimisticEnrollmentHints.forEach((hint, idx) => {
+        const hintCourseId = hint.courseId.trim();
+        const hintKey = `${hintCourseId}|${normalizeKey(hint.courseCode ?? "")}|${normalizeKey(hint.courseTitle ?? "")}`;
+        if (seen.has(hintKey)) return;
+        seen.add(hintKey);
+        withOptimisticHints.push({
+          id: `local-${hintCourseId}-${idx}`,
+          courseId: hintCourseId,
+          apiCourseId:
+            typeof hint.apiCourseId === "number" && Number.isFinite(hint.apiCourseId)
+              ? hint.apiCourseId
+              : Number.NaN,
+          courseCode: hint.courseCode ?? "",
+          title: hint.courseTitle ?? hintCourseId,
+          progress: 0,
+          nextSession: "—",
+        });
+      });
+      setEnrolledCourses(withOptimisticHints);
       const certRows = certificationsFromMePayload(payload);
       setCertifications(certRows.map(mapCertificationRow));
       setLoadingUser(false);
@@ -207,7 +320,7 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [optimisticEnrollmentHints, router, refreshEnrollmentsTick]);
 
   useEffect(() => {
     let active = true;
@@ -464,6 +577,9 @@ export default function DashboardPage() {
                   const nextBatch = nextBatchByCourseId[course.id];
                   const isEnrolled =
                     enrolledCourseKeys.has(course.id) ||
+                    enrolledCourseKeys.has(normalizeKey(course.id)) ||
+                    enrolledCourseKeys.has(normalizeKey(course.title)) ||
+                    enrolledCourseKeys.has(normalizeKey(course.id.replace(/-/g, " "))) ||
                     (course.apiCourseId > 0 && enrolledCourseKeys.has(String(course.apiCourseId)));
                   return (
                     <CourseCard

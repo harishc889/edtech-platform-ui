@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import BackNavLink from "../components/back-nav-link";
 
 export const metadata: Metadata = {
