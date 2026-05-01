@@ -5,9 +5,9 @@ export async function getPublishedCourses() {
   return backendRequestSafe<unknown>(["Course"], { method: "GET" });
 }
 
-/** Swagger: GET /api/Course/{id} */
-export async function getCourseById(id: string | number) {
-  return backendRequestSafe<unknown>(["Course", String(id)], {
+/** Swagger: GET /api/Course/{courseCode} */
+export async function getCourseById(courseCode: string) {
+  return backendRequestSafe<unknown>(["Course", courseCode], {
     method: "GET",
   });
 }
