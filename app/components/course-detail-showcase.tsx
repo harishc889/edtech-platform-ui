@@ -210,7 +210,7 @@ export default function CourseDetailShowcase({
             Choose your start date and mentor
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            In edtech, enrollment usually happens per cohort. Pick the batch that best matches your
+            In la bim academy, enrollment usually happens per cohort. Pick the batch that best matches your
             schedule.
           </p>
 
