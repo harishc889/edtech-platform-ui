@@ -4,7 +4,7 @@ import { EnrollForm } from "../components/enroll-form";
 import BackNavLink from "../components/back-nav-link";
 
 export const metadata: Metadata = {
-  title: "Enroll | EdTech Academy",
+  title: "Enroll | LA Bim Academy",
   description:
     "Choose your program, payment plan, and submit your enrollment request.",
 };

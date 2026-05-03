@@ -115,7 +115,7 @@ export default function CourseDetailShowcase({
     { title: "Language", value: course.language },
     { title: "Mode", value: course.mode },
   ];
-
+  console.log("stats", stats);
   const seatBookingDisplay = useMemo(
     () => new Intl.NumberFormat("en-IN").format(course.seatBookingInr),
     [course.seatBookingInr],
@@ -191,7 +191,7 @@ export default function CourseDetailShowcase({
       </section>
 
       <section className="grid gap-4 border-t border-slate-100 px-6 py-10 sm:grid-cols-2 sm:px-10 lg:grid-cols-4">
-        {stats.map((item) => (
+        {stats.filter(item => item.value !== "— (—)").map((item) => (
           <div key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
               {item.title}
@@ -210,7 +210,7 @@ export default function CourseDetailShowcase({
             Choose your start date and mentor
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            In edtech, enrollment usually happens per cohort. Pick the batch that best matches your
+            In la bim academy, enrollment usually happens per cohort. Pick the batch that best matches your
             schedule.
           </p>
 
@@ -242,7 +242,7 @@ export default function CourseDetailShowcase({
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                       Batch #{batch.id}
                     </p>
-                    <p className="mt-1 text-base font-bold text-slate-900">{batch.mentorName}</p>
+                    {/* <p className="mt-1 text-base font-bold text-slate-900">{batch.mentorName}</p> */}
                     <p className="mt-1 text-sm text-slate-600">
                       {formatBatchDate(batch.startDate)} - {formatBatchDate(batch.endDate)}
                     </p>
@@ -311,7 +311,7 @@ export default function CourseDetailShowcase({
             {course.modules.map((module, idx) => {
               return (
                 <article
-                  key={module.title}
+                  key={idx}
                   className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${expandedModule === idx
                       ? "border-sky-300 shadow-sky-100"
                       : "border-slate-200 hover:border-slate-300"
@@ -411,16 +411,16 @@ export default function CourseDetailShowcase({
       <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
         <div className="mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-5 sm:p-8">
           <h3 className="text-center text-lg font-bold text-white sm:text-2xl">
-            Get Ready to BIM: Unlock 5 Powerful Software Tools to Elevate Your Career
+            Get Ready to BIM: Unlock {toolItems.length} Powerful Software Tools to Elevate Your Career
           </h3>
           {/* <p className="mt-2 text-center text-xs text-slate-300 sm:text-sm">
             Replace each placeholder with your own tool icon/photo.
           </p> */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             {toolItems.map((tool, idx) => (
               <div
                 key={`tool-placeholder-${idx + 1}`}
-                className="flex h-16 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-white text-center shadow-sm sm:h-20"
+                className="flex h-16 w-[calc(50%-0.375rem)] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-white text-center shadow-sm sm:h-20 sm:w-40 md:w-44"
               >
                 {tool.imagePath ? (
                   <Image
@@ -456,10 +456,13 @@ export default function CourseDetailShowcase({
           </h3>
           <div className="mt-6 mb-3">
             <div
-              className={`grid gap-4 ${certificationItems.length <= 2
-                  ? "mx-auto max-w-4xl md:grid-cols-2"
-                  : "md:grid-cols-3"
-                }`}
+              className={`grid gap-4 ${
+                certificationItems.length === 1
+                  ? "mx-auto w-full max-w-md grid-cols-1"
+                  : certificationItems.length === 2
+                    ? "mx-auto max-w-4xl md:grid-cols-2"
+                    : "md:grid-cols-3"
+              }`}
             >
               {certificationItems.map((certificate, idx) => (
                 <article
