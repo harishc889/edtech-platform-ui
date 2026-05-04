@@ -157,11 +157,12 @@ export default function WhyLearnFromUs() {
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    updateScrollState();
+    const raf = requestAnimationFrame(() => updateScrollState());
     el.addEventListener("scroll", updateScrollState, { passive: true });
     const ro = new ResizeObserver(updateScrollState);
     ro.observe(el);
     return () => {
+      cancelAnimationFrame(raf);
       el.removeEventListener("scroll", updateScrollState);
       ro.disconnect();
     };

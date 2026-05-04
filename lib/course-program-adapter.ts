@@ -1,4 +1,124 @@
-import type { Program } from "@/lib/program-catalog";
+import type {
+  CourseLesson,
+  CourseModule,
+  CourseResourceLink,
+  Program,
+} from "@/lib/program-catalog";
+
+function pickString(...vals: unknown[]): string | undefined {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
+function inferResourceKind(
+  url: string,
+  explicit?: string,
+): CourseResourceLink["kind"] {
+  const k = explicit?.toLowerCase();
+  if (k === "pdf" || k === "zip" || k === "model" || k === "link") return k;
+  const u = url.toLowerCase();
+  if (u.endsWith(".pdf")) return "pdf";
+  if (u.endsWith(".zip") || u.endsWith(".rar")) return "zip";
+  if (/\.(rvt|nwd|nwf|ifc|dwg)(\?|$)/i.test(u)) return "model";
+  return "link";
+}
+
+function mapResourceRow(
+  raw: Record<string, unknown>,
+  idx: number,
+): CourseResourceLink | null {
+  const url = pickString(raw.url, raw.href, raw.downloadUrl, raw.fileUrl);
+  if (!url) return null;
+  const title =
+    pickString(raw.title, raw.name, raw.fileName) ?? `Resource ${idx + 1}`;
+  const kindRaw = pickString(raw.kind, raw.type);
+  return { title, url, kind: inferResourceKind(url, kindRaw) };
+}
+
+function mapResources(value: unknown): CourseResourceLink[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const out: CourseResourceLink[] = [];
+  value.forEach((item, idx) => {
+    if (!item || typeof item !== "object") return;
+    const row = mapResourceRow(item as Record<string, unknown>, idx);
+    if (row) out.push(row);
+  });
+  return out.length ? out : undefined;
+}
+
+function mapLesson(raw: Record<string, unknown>, idx: number): CourseLesson {
+  const id =
+    pickString(raw.id, raw.lessonId, raw.contentId) ?? `lesson-${idx + 1}`;
+  const title =
+    pickString(raw.title, raw.name, raw.lessonTitle) ?? `Lesson ${idx + 1}`;
+  const videoUrl = pickString(
+    raw.videoUrl,
+    raw.videoURL,
+    raw.embedUrl,
+    raw.streamUrl,
+    raw.youtubeUrl,
+  );
+  const durationLabel = pickString(raw.duration, raw.durationLabel, raw.length);
+  const resources = mapResources(
+    raw.resources ?? raw.attachments ?? raw.downloads ?? raw.files,
+  );
+  return { id, title, durationLabel, videoUrl, resources };
+}
+
+function mapLessons(value: unknown): CourseLesson[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const out: CourseLesson[] = [];
+  value.forEach((item, idx) => {
+    if (!item || typeof item !== "object") return;
+    out.push(mapLesson(item as Record<string, unknown>, idx));
+  });
+  return out.length ? out : undefined;
+}
+
+function mapCourseModule(raw: Record<string, unknown>, index: number): CourseModule {
+  const title =
+    typeof raw.title === "string" && raw.title.trim()
+      ? raw.title
+      : `Module ${index + 1}`;
+  const hours =
+    typeof raw.hours === "string" && raw.hours.trim() ? raw.hours : "—";
+  const desc =
+    typeof raw.desc === "string" && raw.desc.trim()
+      ? raw.desc
+      : typeof raw.description === "string" && raw.description.trim()
+        ? raw.description
+        : "Module details will be shared soon.";
+
+  let lessons = mapLessons(raw.lessons ?? raw.contents ?? raw.curriculum ?? raw.videos);
+  const moduleResources = mapResources(
+    raw.resources ?? raw.attachments ?? raw.downloads ?? raw.files,
+  );
+  const moduleVideo = pickString(raw.videoUrl, raw.introVideoUrl);
+
+  let resources = moduleResources;
+  if ((!lessons || lessons.length === 0) && moduleVideo) {
+    lessons = [
+      {
+        id: `${index}-module-video`,
+        title:
+          pickString(raw.lessonTitle, raw.firstLessonTitle) ?? "Video lecture",
+        videoUrl: moduleVideo,
+        resources: moduleResources,
+      },
+    ];
+    resources = undefined;
+  }
+
+  return {
+    title,
+    hours,
+    desc,
+    lessons,
+    resources,
+  };
+}
 
 function toNumber(value: unknown, fallback = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -123,21 +243,16 @@ export function mapCourseToProgram(
     engineeringBenefits: toStringArray(raw.engineeringBenefits, []),
     modules:
       Array.isArray(raw.modules) && raw.modules.length > 0
-        ? (raw.modules as Array<Record<string, unknown>>).map((m, i) => ({
-            title:
-              typeof m.title === "string" && m.title.trim()
-                ? m.title
-                : `Module ${i + 1}`,
-            hours:
-              typeof m.hours === "string" && m.hours.trim() ? m.hours : "—",
-            desc:
-              typeof m.desc === "string" && m.desc.trim()
-                ? m.desc
-                : typeof m.description === "string" && m.description.trim()
-                  ? m.description
-                  : "Module details will be shared soon.",
-          }))
-        : [{ title: "Overview", hours: "—", desc: description ?? "Course details." }],
+        ? (raw.modules as Array<Record<string, unknown>>).map((m, i) =>
+            mapCourseModule(m, i),
+          )
+        : [
+            {
+              title: "Overview",
+              hours: "—",
+              desc: description ?? "Course details.",
+            },
+          ],
     tools: Array.isArray(raw.tools)
       ? (raw.tools as Array<Record<string, unknown>>).map((t) => ({
           name: typeof t.name === "string" ? t.name : "Tool",
