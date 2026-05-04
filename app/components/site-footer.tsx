@@ -24,9 +24,9 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <a href="/#courses" className="transition hover:text-sky-200">
+                <Link href="/#courses" className="transition hover:text-sky-200">
                   Courses
-                </a>
+                </Link>
               </li>
               <li>
                 <Link href="/about" className="transition hover:text-sky-200">

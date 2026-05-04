@@ -5,6 +5,28 @@ export type PaymentOption = {
   amountInr: number;
 };
 
+export type CourseResourceLink = {
+  title: string;
+  url: string;
+  kind: "pdf" | "zip" | "model" | "link" | "other";
+};
+
+export type CourseLesson = {
+  id: string;
+  title: string;
+  durationLabel?: string;
+  videoUrl?: string;
+  resources?: CourseResourceLink[];
+};
+
+export type CourseModule = {
+  title: string;
+  hours: string;
+  desc: string;
+  lessons?: CourseLesson[];
+  resources?: CourseResourceLink[];
+};
+
 export type Program = {
   id: string;
   title: string;
@@ -23,7 +45,7 @@ export type Program = {
   description?: string;
   highlights: string[];
   engineeringBenefits: string[];
-  modules: Array<{ title: string; hours: string; desc: string }>;
+  modules: CourseModule[];
   tools?: Array<{ name: string; imagePath: string }>;
   certifications?: Array<{
     title: string;

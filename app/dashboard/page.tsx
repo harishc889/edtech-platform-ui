@@ -12,69 +12,20 @@ import {
 import { fetchCurrentUser, type AuthUser } from "@/lib/auth-service";
 import { getBatchesForCourse } from "@/lib/batch-service";
 import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import {
+  getLearnCourseSlugForEnrollment,
+  learnHrefForEnrollment,
+} from "@/lib/learn-course-route";
 import { getPublishedCourses } from "@/lib/course-service";
 import { getMyEnrolledCourses } from "@/lib/enroll-service";
-
-function mapEnrollmentRow(raw: Record<string, unknown>, index: number) {
-  const nestedCourse =
-    raw.course && typeof raw.course === "object"
-      ? (raw.course as Record<string, unknown>)
-      : null;
-  const apiCourseId = toNumber(
-    raw.courseId ??
-      raw.course_id ??
-      raw.courseMasterId ??
-      nestedCourse?.id ??
-      nestedCourse?.courseId,
-    Number.NaN,
-  );
-  const id = String(
-    raw.id ?? raw.enrollmentId ?? raw.batchId ?? `row-${index}`,
-  );
-  const title = String(
-    raw.title ??
-      raw.courseTitle ??
-      raw.courseName ??
-      nestedCourse?.title ??
-      nestedCourse?.name ??
-      raw.name ??
-      "Course",
-  );
-  let progress = 0;
-  if (typeof raw.progress === "number") {
-    progress = Math.max(0, Math.min(100, Math.round(raw.progress)));
-  } else if (typeof raw.progressPercent === "number") {
-    progress = Math.max(0, Math.min(100, Math.round(raw.progressPercent)));
-  }
-  const nextSession =
-    typeof raw.nextSession === "string"
-      ? raw.nextSession
-      : typeof raw.scheduledAt === "string"
-        ? raw.scheduledAt
-        : "—";
-  const courseCode =
-    typeof raw.courseCode === "string" && raw.courseCode.trim()
-      ? raw.courseCode.trim()
-      : typeof nestedCourse?.courseCode === "string" && nestedCourse.courseCode.trim()
-        ? nestedCourse.courseCode.trim()
-        : typeof raw.slug === "string" && raw.slug.trim()
-          ? raw.slug.trim()
-          : typeof nestedCourse?.slug === "string" && nestedCourse.slug.trim()
-            ? nestedCourse.slug.trim()
-            : typeof raw.code === "string" && raw.code.trim()
-              ? raw.code.trim()
-              : typeof nestedCourse?.code === "string" && nestedCourse.code.trim()
-                ? nestedCourse.code.trim()
-                : "";
-  const courseId =
-    courseCode ||
-    (Number.isFinite(apiCourseId) ? String(apiCourseId) : `row-${index}`);
-  return { id, courseId, apiCourseId, courseCode, title, progress, nextSession };
-}
-
-function normalizeKey(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "-");
-}
+import {
+  mapEnrollmentRow,
+  normalizeEnrollmentKey as normalizeKey,
+} from "@/lib/enrollment-map";
+import {
+  certificationsFromMePayload,
+  mapCertificationRow,
+} from "@/lib/me-certifications";
 
 type EnrollmentChangedDetail = {
   courseId: string;
@@ -82,61 +33,6 @@ type EnrollmentChangedDetail = {
   courseTitle?: string;
   apiCourseId?: number;
 };
-
-function certificationsFromMePayload(data: unknown): Record<string, unknown>[] {
-  if (!data || typeof data !== "object") return [];
-  const o = data as Record<string, unknown>;
-  const user =
-    o.user && typeof o.user === "object"
-      ? (o.user as Record<string, unknown>)
-      : null;
-  const candidates = [
-    o.certifications,
-    o.certificates,
-    o.myCertifications,
-    o.myCertificates,
-    user?.certifications,
-    user?.certificates,
-    user?.myCertifications,
-    user?.myCertificates,
-  ];
-  for (const candidate of candidates) {
-    const rows = Array.isArray(candidate)
-      ? candidate.filter((item) => item && typeof item === "object")
-      : [];
-    if (rows.length > 0) {
-      return rows as Record<string, unknown>[];
-    }
-  }
-  return [];
-}
-
-function mapCertificationRow(raw: Record<string, unknown>, index: number) {
-  const id = String(raw.id ?? raw.certificateId ?? raw.certificationId ?? `cert-${index}`);
-  const title = String(
-    raw.title ??
-      raw.name ??
-      raw.certificateName ??
-      raw.certificationName ??
-      "Certificate",
-  );
-  const issuedOn = String(
-    raw.issuedOn ?? raw.issueDate ?? raw.awardedAt ?? raw.createdAt ?? "—",
-  );
-  const credentialId =
-    typeof raw.credentialId === "string" && raw.credentialId.trim()
-      ? raw.credentialId.trim()
-      : typeof raw.certificateCode === "string" && raw.certificateCode.trim()
-        ? raw.certificateCode.trim()
-        : null;
-  const verifyUrl =
-    typeof raw.verifyUrl === "string" && raw.verifyUrl.trim()
-      ? raw.verifyUrl.trim()
-      : typeof raw.certificateUrl === "string" && raw.certificateUrl.trim()
-        ? raw.certificateUrl.trim()
-        : null;
-  return { id, title, issuedOn, credentialId, verifyUrl };
-}
 
 type NextBatchPreview = {
   id: number;
@@ -509,12 +405,18 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  <div className="mt-8 flex flex-1 items-end">
+                  <div className="mt-8 flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
                     <Link
-                      href={`/courses?course=${encodeURIComponent(course.courseId)}`}
-                      className="flex w-full items-center justify-center rounded-full bg-slate-900 py-3.5 text-center text-sm font-bold text-white transition hover:bg-slate-800"
+                      href={learnHrefForEnrollment(course, browseCourses)}
+                      className="flex w-full flex-1 items-center justify-center rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500"
                     >
-                      Join Live Class
+                      Open course
+                    </Link>
+                    <Link
+                      href={`/courses?course=${encodeURIComponent(getLearnCourseSlugForEnrollment(course, browseCourses))}`}
+                      className="flex w-full flex-1 items-center justify-center rounded-full border-2 border-slate-200 bg-white py-3.5 text-center text-sm font-bold text-slate-800 transition hover:border-slate-300"
+                    >
+                      Course info &amp; live class
                     </Link>
                   </div>
                 </article>
