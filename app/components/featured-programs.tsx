@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import CourseCard from "@/app/components/course-card";
 import { asRecordList } from "@/lib/api-normalize";
 import { getBatchesForCourse } from "@/lib/batch-service";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
-import { getPublishedCourses } from "@/lib/course-service";
+import { getCachedPrograms } from "@/lib/client-course-cache";
 import type { Program } from "@/lib/program-catalog";
 
 type NextBatchPreview = {
@@ -71,10 +70,9 @@ export default function FeaturedPrograms() {
 
   useEffect(() => {
     let active = true;
-    void getPublishedCourses().then((res) => {
-      if (!active || !res.ok) return;
-      const rows = asRecordList(res.data);
-      setPrograms(rows.map((row) => mapCourseToProgram(row)));
+    void getCachedPrograms().then((rows) => {
+      if (!active) return;
+      setPrograms(rows);
     });
     return () => {
       active = false;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { login } from "@/lib/auth-service";
+import { fetchCurrentUser, login } from "@/lib/auth-service";
 import { getSessionInactiveMessage } from "@/lib/auth-session-error";
 import {
   PasswordFieldWithToggle,
@@ -35,8 +35,18 @@ export default function LoginPage() {
     return !nextEmailError && !nextPasswordError;
   }
 
+  async function ensureSessionReady() {
+    const first = await fetchCurrentUser();
+    if (first.ok) return true;
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const second = await fetchCurrentUser();
+    return second.ok;
+  }
+
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
     const nextEmail = (formData.get("email")?.toString() ?? email).trim();
@@ -61,6 +71,14 @@ export default function LoginPage() {
         return;
       }
 
+      const sessionReady = await ensureSessionReady();
+      if (!sessionReady) {
+        setFormError(
+          "Login is taking longer than expected. Please try again in a moment.",
+        );
+        return;
+      }
+
       const nextPath =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("next")
@@ -71,7 +89,6 @@ export default function LoginPage() {
           : "/dashboard";
       window.dispatchEvent(new Event("auth:changed"));
       router.push(redirectTo);
-      router.refresh();
     } finally {
       setIsSubmitting(false);
     }

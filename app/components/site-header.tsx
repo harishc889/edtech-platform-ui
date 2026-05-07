@@ -4,11 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { asRecordList } from "@/lib/api-normalize";
 import { useToast } from "@/app/components/toast-provider";
 import { fetchCurrentUser, logout, type AuthUser } from "@/lib/auth-service";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
-import { getPublishedCourses } from "@/lib/course-service";
+import { getCachedPrograms } from "@/lib/client-course-cache";
 import type { Program } from "@/lib/program-catalog";
 
 const navLinks = [
@@ -29,6 +27,7 @@ export default function SiteHeader() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [authVersion, setAuthVersion] = useState(0);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [programsLoading, setProgramsLoading] = useState(false);
   const { showToast } = useToast();
   const desktopCoursesRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -60,15 +59,20 @@ export default function SiteHeader() {
   }, []);
 
   useEffect(() => {
+    if ((!desktopCoursesOpen && !coursesOpen) || programs.length > 0 || programsLoading) {
+      return;
+    }
     let active = true;
-    void getPublishedCourses().then((res) => {
-      if (!active || !res.ok) return;
-      setPrograms(asRecordList(res.data).map((row) => mapCourseToProgram(row)));
+    setProgramsLoading(true);
+    void getCachedPrograms().then((rows) => {
+      if (!active) return;
+      setPrograms(rows);
+      setProgramsLoading(false);
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [coursesOpen, desktopCoursesOpen, programs.length, programsLoading]);
 
   useEffect(() => {
     function handleAuthChanged() {
@@ -165,7 +169,6 @@ export default function SiteHeader() {
           : "Logged out locally. Server logout failed.",
       });
       router.push("/login");
-      router.refresh();
       setIsLoggingOut(false);
     }
   }
@@ -236,6 +239,9 @@ export default function SiteHeader() {
             </button>
             {desktopCoursesOpen ? (
               <div className="absolute left-0 top-full z-50 mt-3 w-80 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/60">
+                {programsLoading && programs.length === 0 ? (
+                  <p className="px-3 py-2.5 text-sm text-slate-500">Loading courses...</p>
+                ) : null}
                 {programs.map((course) => (
                   <Link
                     key={course.id}
@@ -393,6 +399,9 @@ export default function SiteHeader() {
 
             {coursesOpen ? (
               <div className="ml-2 space-y-1 rounded-xl border border-slate-100 bg-slate-50/70 p-2">
+                {programsLoading && programs.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-slate-500">Loading courses...</p>
+                ) : null}
                 {programs.map((course) => (
                   <Link
                     key={course.id}
