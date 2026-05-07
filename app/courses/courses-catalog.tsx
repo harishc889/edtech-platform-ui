@@ -7,7 +7,8 @@ import CourseCard from "@/app/components/course-card";
 import { asRecordList } from "@/lib/api-normalize";
 import { getBatchesForCourse } from "@/lib/batch-service";
 import { mapCourseToProgram } from "@/lib/course-program-adapter";
-import { getCourseById, getPublishedCourses } from "@/lib/course-service";
+import { getCachedPrograms } from "@/lib/client-course-cache";
+import { getCourseById } from "@/lib/course-service";
 import { enrollInBatch } from "@/lib/enroll-service";
 
 type NextBatchPreview = {
@@ -60,9 +61,8 @@ function pickNearestBatch(rows: Record<string, unknown>[]): NextBatchPreview | n
   return { id: best.id, startDate: best.startDate, capacity: best.capacity };
 }
 
-function mapCourseCard(raw: Record<string, unknown>, index: number) {
-  const id = String(raw.id ?? index);
-  const program = mapCourseToProgram(raw, id);
+function mapCourseCard(program: ReturnType<typeof mapCourseToProgram>, index: number) {
+  const id = String(program.id ?? index);
   return {
     id,
     courseCode: program.id,
@@ -103,16 +103,15 @@ export default function CoursesCatalog() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setListLoading(true);
     setListError(null);
-    void getPublishedCourses().then((res) => {
+    void getCachedPrograms().then((programs) => {
       if (!active) return;
-      if (!res.ok) {
-        setListError(res.message);
+      if (programs.length === 0) {
+        setListError("Unable to load courses right now. Please try again.");
         setCourses([]);
         setListLoading(false);
         return;
       }
-      const rows = asRecordList(res.data);
-      setCourses(rows.map(mapCourseCard));
+      setCourses(programs.map((program, idx) => mapCourseCard(program, idx)));
       setListLoading(false);
     });
     return () => {

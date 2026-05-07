@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMemo, useState, type FormEvent } from "react";
 import { toModuleDescriptionHtml } from "@/lib/module-description-html";
 import type {
@@ -30,6 +31,25 @@ type Props = {
   progressPercent: number;
   certifications: PlayerCertification[];
 };
+
+const AssignmentsTab = dynamic(
+  () => import("@/app/components/course-tabs/assignments-tab"),
+  {
+    loading: () => <p className="text-sm text-slate-400">Loading assignments...</p>,
+  },
+);
+const CertificatesTab = dynamic(
+  () => import("@/app/components/course-tabs/certificates-tab"),
+  {
+    loading: () => <p className="text-sm text-slate-400">Loading certificates...</p>,
+  },
+);
+const CareerTab = dynamic(
+  () => import("@/app/components/course-tabs/career-tab"),
+  {
+    loading: () => <p className="text-sm text-slate-400">Loading career details...</p>,
+  },
+);
 
 function youtubeEmbedId(url: string): string | null {
   try {
@@ -382,223 +402,14 @@ export default function EnrolledCoursePlayer({
           </div>
         ) : null}
 
-        {tab === "assignments" ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8">
-            <h2 className="font-display text-lg font-bold text-white sm:text-xl">
-              Project uploads
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-400">
-              Submit industry-standard deliverables (for example Revit, Navisworks, or IFC
-              packages). Keep file sizes reasonable; mentors review submissions during studio
-              hours.
-            </p>
-            <div className="mt-8 space-y-6">
-              {course.modules.map((module, idx) => (
-                <AssignmentCard
-                  key={`${module.title}-${idx}`}
-                  courseTitle={course.title}
-                  moduleTitle={module.title}
-                  moduleIndex={idx + 1}
-                />
-              ))}
-            </div>
-          </div>
-        ) : null}
+        {tab === "assignments" ? <AssignmentsTab course={course} /> : null}
 
         {tab === "certificates" ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8">
-            <h2 className="font-display text-lg font-bold text-white sm:text-xl">
-              Your certificates
-            </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Download or verify credentials issued to your account.
-            </p>
-            {certifications.length === 0 ? (
-              <p className="mt-8 rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-6 text-sm text-slate-500">
-                Certificates will appear here after your academy records course completion.
-              </p>
-            ) : (
-              <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-                {certifications.map((c) => (
-                  <li
-                    key={c.id}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-lg"
-                  >
-                    <p className="text-xs font-bold uppercase tracking-wide text-cyan-400">
-                      Credential
-                    </p>
-                    <p className="mt-2 font-semibold text-white">{c.title}</p>
-                    <p className="mt-2 text-xs text-slate-500">Issued {c.issuedOn}</p>
-                    {c.credentialId ? (
-                      <p className="mt-1 text-xs text-slate-500">ID: {c.credentialId}</p>
-                    ) : null}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {c.verifyUrl ? (
-                        <a
-                          href={c.verifyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-cyan-500/20"
-                        >
-                          Download / verify
-                        </a>
-                      ) : (
-                        <span className="text-xs text-slate-500">Link not available yet</span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <CertificatesTab certifications={certifications} />
         ) : null}
 
-        {tab === "career" ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8">
-              <h2 className="font-display text-lg font-bold text-white">Career tracks</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Roles this program prepares you for—align assignments and portfolio pieces to
-                these outcomes.
-              </p>
-              <ul className="mt-6 space-y-2">
-                {course.careerRoles.length === 0 ? (
-                  <li className="text-sm text-slate-500">Career paths will be listed soon.</li>
-                ) : (
-                  course.careerRoles.map((role) => (
-                    <li
-                      key={role}
-                      className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm font-medium text-slate-200"
-                    >
-                      {role}
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8">
-              <h2 className="font-display text-lg font-bold text-white">
-                Placement assistance
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                Work with mentors on resume reviews, mock interviews, and portfolio critique.
-                Complete assignments on time to stay eligible for recruiter referrals and
-                internship verification letters.
-              </p>
-              <ul className="mt-6 space-y-3 text-sm text-slate-300">
-                <li className="flex gap-2">
-                  <span className="text-cyan-400">✓</span>
-                  Studio feedback on BIM standards and coordination workflows
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-cyan-400">✓</span>
-                  Guided capstone presentation suitable for employers
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-cyan-400">✓</span>
-                  Evaluation aligned with {course.criteriaSummary.minimumScore} minimum score
-                  criteria
-                </li>
-              </ul>
-            </div>
-          </div>
-        ) : null}
+        {tab === "career" ? <CareerTab course={course} /> : null}
       </div>
     </div>
-  );
-}
-
-function AssignmentCard({
-  courseTitle,
-  moduleTitle,
-  moduleIndex,
-}: {
-  courseTitle: string;
-  moduleTitle: string;
-  moduleIndex: number;
-}) {
-  const [file, setFile] = useState<File | null>(null);
-  const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!file) {
-      setStatus("error");
-      return;
-    }
-    setStatus("sent");
-    setFile(null);
-    setNotes("");
-    const input = document.getElementById(
-      `assignment-file-${moduleIndex}`,
-    ) as HTMLInputElement | null;
-    if (input) input.value = "";
-  }
-
-  return (
-    <article className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 sm:p-6">
-      <p className="text-xs font-bold uppercase tracking-wide text-cyan-400">
-        Module {moduleIndex}
-      </p>
-      <h3 className="mt-1 font-semibold text-white">{moduleTitle}</h3>
-      <p className="mt-2 text-xs text-slate-500">Course: {courseTitle}</p>
-      <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-        <div>
-          <label
-            className="block text-xs font-bold uppercase tracking-wide text-slate-400"
-            htmlFor={`assignment-file-${moduleIndex}`}
-          >
-            Upload project files
-          </label>
-          <input
-            id={`assignment-file-${moduleIndex}`}
-            type="file"
-            className="mt-2 block w-full cursor-pointer rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
-            onChange={(ev) => {
-              setFile(ev.target.files?.[0] ?? null);
-              setStatus("idle");
-            }}
-          />
-          <p className="mt-1 text-[11px] text-slate-500">
-            Accepted: .rvt, .nwd, .dwg, .ifc, .zip, PDFs, and supporting exports.
-          </p>
-        </div>
-        <div>
-          <label
-            className="block text-xs font-bold uppercase tracking-wide text-slate-400"
-            htmlFor={`assignment-notes-${moduleIndex}`}
-          >
-            Notes for mentor (optional)
-          </label>
-          <textarea
-            id={`assignment-notes-${moduleIndex}`}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-cyan-600 focus:outline-none focus:ring-1 focus:ring-cyan-600"
-            placeholder="software version, submission scope, team member names…"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-blue-500"
-          >
-            Submit deliverable
-          </button>
-          {status === "sent" ? (
-            <span className="text-xs font-semibold text-emerald-400">
-              Recorded locally — connect backend upload API when ready.
-            </span>
-          ) : null}
-          {status === "error" ? (
-            <span className="text-xs font-semibold text-rose-400">
-              Choose at least one file to submit.
-            </span>
-          ) : null}
-        </div>
-      </form>
-    </article>
   );
 }

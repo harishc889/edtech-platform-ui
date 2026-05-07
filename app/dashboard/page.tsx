@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CourseCard from "@/app/components/course-card";
 import {
   asRecordList,
@@ -118,6 +118,8 @@ export default function DashboardPage() {
     EnrollmentChangedDetail[]
   >([]);
   const [refreshEnrollmentsTick, setRefreshEnrollmentsTick] = useState(0);
+  const optimisticEnrollmentHintsRef = useRef<EnrollmentChangedDetail[]>([]);
+  const lastRefreshAtRef = useRef(0);
   const enrolledCourseKeys = new Set(
     enrolledCourses.flatMap((course) => {
       const normalizedCode = normalizeKey(course.courseCode);
@@ -134,6 +136,17 @@ export default function DashboardPage() {
     }),
   );
   useEffect(() => {
+    optimisticEnrollmentHintsRef.current = optimisticEnrollmentHints;
+  }, [optimisticEnrollmentHints]);
+
+  useEffect(() => {
+    function requestEnrollmentRefresh() {
+      const now = Date.now();
+      if (now - lastRefreshAtRef.current < 1000) return;
+      lastRefreshAtRef.current = now;
+      setRefreshEnrollmentsTick((v) => v + 1);
+    }
+
     function handleEnrollmentChanged(event: Event) {
       const customEvent = event as CustomEvent<EnrollmentChangedDetail | undefined>;
       const detail = customEvent.detail;
@@ -143,18 +156,23 @@ export default function DashboardPage() {
           return [...next, detail];
         });
       }
-      setRefreshEnrollmentsTick((v) => v + 1);
+      requestEnrollmentRefresh();
     }
-    function handleVisibilityOrFocus() {
-      setRefreshEnrollmentsTick((v) => v + 1);
+    function handleFocus() {
+      requestEnrollmentRefresh();
+    }
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        requestEnrollmentRefresh();
+      }
     }
     window.addEventListener("enrollment:changed", handleEnrollmentChanged);
-    window.addEventListener("focus", handleVisibilityOrFocus);
-    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       window.removeEventListener("enrollment:changed", handleEnrollmentChanged);
-      window.removeEventListener("focus", handleVisibilityOrFocus);
-      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
   useEffect(() => {
@@ -173,11 +191,14 @@ export default function DashboardPage() {
       const profile = profileFromMePayload(payload) as AuthUser | null;
       setCurrentUser(profile);
       const meRows = enrollmentsFromMePayload(payload);
-      const fallbackResponse = await getMyEnrolledCourses();
-      if (!active) return;
-      const fallbackRows = fallbackResponse.ok
-        ? asRecordList(fallbackResponse.data)
-        : [];
+      let fallbackRows: Record<string, unknown>[] = [];
+      if (meRows.length === 0) {
+        const fallbackResponse = await getMyEnrolledCourses();
+        if (!active) return;
+        fallbackRows = fallbackResponse.ok
+          ? asRecordList(fallbackResponse.data)
+          : [];
+      }
       const mergedRows = [...meRows, ...fallbackRows];
       const mapped = mergedRows.map(mapEnrollmentRow);
       const seen = new Set<string>();
@@ -188,7 +209,7 @@ export default function DashboardPage() {
         return true;
       });
       const withOptimisticHints = [...deduped];
-      optimisticEnrollmentHints.forEach((hint, idx) => {
+      optimisticEnrollmentHintsRef.current.forEach((hint, idx) => {
         const hintCourseId = hint.courseId.trim();
         const hintKey = `${hintCourseId}|${normalizeKey(hint.courseCode ?? "")}|${normalizeKey(hint.courseTitle ?? "")}`;
         if (seen.has(hintKey)) return;
@@ -216,7 +237,7 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [optimisticEnrollmentHints, router, refreshEnrollmentsTick]);
+  }, [router, refreshEnrollmentsTick]);
 
   useEffect(() => {
     let active = true;

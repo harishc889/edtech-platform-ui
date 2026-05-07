@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import JsonLd from "@/app/components/seo/json-ld";
 import CourseDetailClient from "./course-detail-client";
 import { getBackendApiPrefix, getBackendOrigin } from "@/lib/backend-env";
@@ -16,12 +17,12 @@ function titleFromSlug(slug: string) {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-async function getCourseSeoData(slug: string): Promise<{
+const getCourseSeoData = cache(async (slug: string): Promise<{
   title?: string;
   description?: string;
   image?: string;
   priceInr?: number;
-} | null> {
+} | null> => {
   const origin = getBackendOrigin();
   if (!origin) return null;
   const prefix = getBackendApiPrefix();
@@ -61,7 +62,7 @@ async function getCourseSeoData(slug: string): Promise<{
   } catch {
     return null;
   }
-}
+});
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;

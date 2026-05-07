@@ -67,11 +67,14 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
 
       const payload = auth.data;
       const meRows = enrollmentsFromMePayload(payload);
-      const fallbackResponse = await getMyEnrolledCourses();
-      if (!active) return;
-      const fallbackRows = fallbackResponse.ok
-        ? asRecordList(fallbackResponse.data)
-        : [];
+      let fallbackRows: Record<string, unknown>[] = [];
+      if (meRows.length === 0) {
+        const fallbackResponse = await getMyEnrolledCourses();
+        if (!active) return;
+        fallbackRows = fallbackResponse.ok
+          ? asRecordList(fallbackResponse.data)
+          : [];
+      }
       const mergedRows = [...meRows, ...fallbackRows];
       const enrollmentRows = mergedRows.map(mapEnrollmentRow);
       const seen = new Set<string>();
