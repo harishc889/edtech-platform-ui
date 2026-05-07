@@ -3,9 +3,12 @@ import Image from "next/image";
 import BackNavLink from "@/app/components/back-nav-link";
 
 export const metadata: Metadata = {
-  title: "About Us | LA Bim Academy",
+  title: "About Us",
   description:
     "LA BIM Academy empowers students and professionals with practical, job-oriented BIM training aligned to real industry projects.",
+  alternates: {
+    canonical: "/about",
+  },
 };
 
 const offerings = [

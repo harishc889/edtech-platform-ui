@@ -4,12 +4,12 @@ import Link from "next/link";
  * FAQ copy as HTML fragments (trusted static content only).
  * Use normal tags: p, ul, li, strong, a. Styling: `.home-faq-html` in `app/globals.css`.
  */
-type FaqItem = {
+export type FaqItem = {
   q: string;
   answerHtml: string;
 };
 
-const faqs: FaqItem[] = [
+export const homeFaqs: FaqItem[] = [
   {
     q: "What is BIM and why should I learn it?",
     answerHtml: `<p>Building Information Modeling (BIM) is a smart digital process used in construction and design to create and manage building data. Learning BIM opens up career opportunities in architecture, engineering, and construction industries.</p>
@@ -129,7 +129,7 @@ export default function HomeFaqSection() {
       </div>
 
       <div className="mx-auto mt-12 max-w-3xl space-y-3 sm:mt-14 sm:space-y-4">
-        {faqs.map((item) => (
+        {homeFaqs.map((item) => (
           <details
             key={item.q}
             className="group rounded-2xl border border-slate-200/90 bg-white/90 shadow-sm ring-1 ring-slate-100/80 transition-[border-color,box-shadow,background-color] duration-200 open:border-slate-700/90 open:bg-gradient-to-br open:from-slate-700 open:via-slate-700 open:to-slate-600 open:shadow-xl open:ring-slate-800/60"

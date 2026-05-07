@@ -1,5 +1,15 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import CoursesCatalog from "@/app/courses/courses-catalog";
+
+export const metadata: Metadata = {
+  title: "BIM Course Catalog",
+  description:
+    "Explore live BIM training programs across Architecture, Structure, and MEP with upcoming batch details and enrollment options.",
+  alternates: {
+    canonical: "/courses",
+  },
+};
 
 export default function CoursesPage() {
   return (

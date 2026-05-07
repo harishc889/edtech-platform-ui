@@ -1,13 +1,28 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
+import JsonLd from "@/app/components/seo/json-ld";
 import FeaturedPrograms from "./components/featured-programs";
 import HomeHeroActions from "./components/home-hero-actions";
-import HomeFaqSection from "./components/home-faq-section";
+import HomeFaqSection, { homeFaqs } from "./components/home-faq-section";
 import WhyLearnFromUs from "./components/why-learn-from-us";
+import { faqSchema } from "@/lib/seo/schemas";
+
+export const metadata: Metadata = {
+  title: "BIM Courses in India",
+  description:
+    "Master BIM with expert-led Revit, Structure, and MEP training. Learn through live projects, practical workflows, and career-focused mentoring.",
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default function Home() {
+  const faqJsonLd = faqSchema(homeFaqs);
+
   return (
     <>
+      <JsonLd data={faqJsonLd} />
       <section className="relative min-h-[28rem] overflow-hidden bg-slate-950 px-4 pb-20 pt-12 text-white sm:min-h-[32rem] sm:px-6 sm:pb-28 sm:pt-16 lg:min-h-[36rem] lg:px-8 lg:pb-32 lg:pt-20">
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <Image

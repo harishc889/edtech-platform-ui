@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import BackNavLink from "../components/back-nav-link";
 
 export const metadata: Metadata = {
-  title: "Contact Us | LA Bim Academy",
+  title: "Contact Us",
   description:
-    "Get in touch with LA Bim Academy for BIM and VDC services.",
+    "Get in touch with LA BIM Academy for course guidance, batch schedules, and enrollment support.",
+  alternates: {
+    canonical: "/contact",
+  },
 };
 
 export default function ContactPage() {
