@@ -15,12 +15,12 @@ export default function FloatingEnquiryCta() {
 
   return (
     <>
-      <div className="fixed right-2 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-2 lg:flex">
+      <div className="fixed right-4 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-3 lg:flex">
       <Link
         href="https://youtube.com/@labimacademy?si=1AZ0uVXpuKfeNqrK"
         target="_blank"
         aria-label="YouTube"
-        className="group relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-[#FF0000] shadow-lg shadow-slate-300/60 transition hover:scale-105"
+        className="group relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-[#FF0000] shadow-lg shadow-slate-300/60 transition hover:scale-105"
       >
         <span className="pointer-events-none absolute right-full mr-2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white opacity-0 shadow-md transition group-hover:opacity-100">
           YouTube
@@ -34,7 +34,7 @@ export default function FloatingEnquiryCta() {
         href="https://www.linkedin.com/company/labimacademy/"
         aria-label="LinkedIn"
         target="_blank"
-        className="group relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-[#0A66C2] shadow-lg shadow-slate-300/60 transition hover:scale-105"
+        className="group relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-[#0A66C2] shadow-lg shadow-slate-300/60 transition hover:scale-105"
       >
         <span className="pointer-events-none absolute right-full mr-2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white opacity-0 shadow-md transition group-hover:opacity-100">
           LinkedIn
@@ -47,7 +47,7 @@ export default function FloatingEnquiryCta() {
       <Link
         href={whatsappBusinessLink}
         aria-label="WhatsApp"
-        className="group relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-[#25D366] shadow-lg shadow-slate-300/60 transition hover:scale-105"
+        className="group relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-[#25D366] shadow-lg shadow-slate-300/60 transition hover:scale-105"
         target={whatsappBusinessLink.startsWith("http") ? "_blank" : undefined}
         rel={
           whatsappBusinessLink.startsWith("http")

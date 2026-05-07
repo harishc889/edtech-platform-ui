@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 type CourseCardProps = {
@@ -27,13 +28,6 @@ export default function CourseCard({
 }: CourseCardProps) {
   const coverSrc = cardCoverImage?.trim() ?? "";
   const hasCoverImage = coverSrc.length > 0;
-  const coverStyle = hasCoverImage
-    ? {
-      backgroundImage: `linear-gradient(to top, rgb(15 23 42 / 0.94) 0%, rgb(15 23 42 / 0.55) 20%, rgb(15 23 42 / 0.2) 40%), url(${JSON.stringify(encodeURI(coverSrc))})`,
-      backgroundSize: "cover" as const,
-      backgroundPosition: "center" as const,
-    }
-    : undefined;
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:border-sky-200/80 hover:shadow-xl hover:shadow-sky-500/10">
@@ -43,8 +37,22 @@ export default function CourseCard({
             ? "relative h-44 overflow-hidden bg-slate-900 sm:h-52"
             : "relative h-44 overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-sky-900 sm:h-48"
         }
-        style={coverStyle}
       >
+        {hasCoverImage ? (
+          <Image
+            src={coverSrc}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            quality={68}
+            loading="lazy"
+            className="object-cover object-center"
+          />
+        ) : null}
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-900/55 to-slate-900/20"
+          aria-hidden
+        />
         {!hasCoverImage ? (
           <div
             className="absolute inset-0 opacity-40"
@@ -74,8 +82,8 @@ export default function CourseCard({
       </div>
 
       <div className="flex flex-1 flex-col p-6 sm:p-8">
-        <dl className="overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/90 to-sky-50/40 shadow-sm ring-1 ring-slate-100/90">
-          <div className="flex gap-4 border-slate-200/70 px-4 py-4 sm:px-5 sm:py-4">
+        <ul className="overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/90 to-sky-50/40 shadow-sm ring-1 ring-slate-100/90">
+          <li className="flex gap-4 border-slate-200/70 px-4 py-4 sm:px-5 sm:py-4">
             <div
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/25"
               aria-hidden
@@ -95,15 +103,15 @@ export default function CourseCard({
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-800/80">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-800/80">
                 Duration
-              </dt>
-              <dd className="mt-0.5 text-base font-medium leading-snug tracking-tight text-slate-600 sm:text-lg">
+              </p>
+              <p className="mt-0.5 text-base font-medium leading-snug tracking-tight text-slate-600 sm:text-lg">
                 {duration}
-              </dd>
+              </p>
             </div>
-          </div>
-          <div className="flex gap-4 border-t border-slate-200/70 px-4 py-4 sm:px-5 sm:py-4">
+          </li>
+          <li className="flex gap-4 border-t border-slate-200/70 px-4 py-4 sm:px-5 sm:py-4">
             <div
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-600 to-slate-800 text-white shadow-md shadow-sky-600/20"
               aria-hidden
@@ -123,15 +131,15 @@ export default function CourseCard({
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-800/80">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-800/80">
                 Eligibility
-              </dt>
-              <dd className="mt-0.5 text-base font-medium leading-snug tracking-tight text-slate-600 sm:text-lg">
+              </p>
+              <p className="mt-0.5 text-base font-medium leading-snug tracking-tight text-slate-600 sm:text-lg">
                 {eligibility}
-              </dd>
+              </p>
             </div>
-          </div>
-          <div className="flex gap-4 border-t border-slate-200/70 px-4 py-4 sm:px-5 sm:py-4">
+          </li>
+          <li className="flex gap-4 border-t border-slate-200/70 px-4 py-4 sm:px-5 sm:py-4">
             <div
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25"
               aria-hidden
@@ -151,15 +159,15 @@ export default function CourseCard({
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-800/80">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-800/80">
                 Next Batch
-              </dt>
-              <dd className="mt-0.5 text-base font-medium leading-snug tracking-tight text-slate-600 sm:text-lg">
+              </p>
+              <p className="mt-0.5 text-base font-medium leading-snug tracking-tight text-slate-600 sm:text-lg">
                 {nextBatchLabel}
-              </dd>
+              </p>
             </div>
-          </div>
-        </dl>
+          </li>
+        </ul>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link

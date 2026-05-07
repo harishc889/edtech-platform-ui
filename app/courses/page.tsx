@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import CoursesCatalog from "@/app/courses/courses-catalog";
 
+export const revalidate = 1800;
+
 export const metadata: Metadata = {
   title: "BIM Course Catalog",
   description:

@@ -187,7 +187,7 @@ export default function SiteHeader() {
           <span className="relative h-10 w-9 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200/90 sm:h-11 sm:w-10">
             <Image
               src="/images/la-bim-academy-logo.png"
-              alt=""
+              alt="LA Bim Academy logo"
               fill
               quality={70}
               loading="eager"
@@ -202,7 +202,7 @@ export default function SiteHeader() {
                 Academy
               </span>
             </span>
-            <span className="mt-0.5 text-[10px] font-medium leading-tight whitespace-nowrap text-slate-500 sm:mt-1 sm:text-xs">
+            <span className="mt-0.5 text-[10px] font-medium leading-tight whitespace-nowrap text-slate-600 sm:mt-1 sm:text-xs">
               From Learning to Smart Building
             </span>
           </span>
