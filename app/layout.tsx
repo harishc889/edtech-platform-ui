@@ -20,8 +20,50 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "LA Bim Academy",
-  description: "Live courses & professional learning",
+  metadataBase: new URL("https://labimacademy.com"),
+  title: {
+    default: "LA BIM Academy | BIM Courses in India",
+    template: "%s | LA BIM Academy",
+  },
+  description:
+    "Job-oriented BIM courses in Architecture, Structure, and MEP with live project training, mentorship, and placement support.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://labimacademy.com",
+    siteName: "LA BIM Academy",
+    title: "LA BIM Academy | BIM Courses in India",
+    description:
+      "Master BIM with expert-led, project-based training for AEC careers.",
+    images: [
+      {
+        url: "/images/hero-home.webp",
+        width: 1200,
+        height: 630,
+        alt: "LA BIM Academy",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LA BIM Academy | BIM Courses in India",
+    description:
+      "Expert-led BIM training with practical projects and career support.",
+    images: ["/images/hero-home.webp"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export default function RootLayout({

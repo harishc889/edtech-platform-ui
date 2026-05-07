@@ -1,167 +1,126 @@
-"use client";
-
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import CourseDetailShowcase from "@/app/components/course-detail-showcase";
-import { asRecordList } from "@/lib/api-normalize";
-import { getBatchesForCourse } from "@/lib/batch-service";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
-import { getCourseById } from "@/lib/course-service";
-import type { Program } from "@/lib/program-catalog";
+import type { Metadata } from "next";
+import JsonLd from "@/app/components/seo/json-ld";
+import CourseDetailClient from "./course-detail-client";
+import { getBackendApiPrefix, getBackendOrigin } from "@/lib/backend-env";
+import { breadcrumbSchema, courseSchema } from "@/lib/seo/schemas";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-type CourseBatch = {
-  id: number;
-  mentorName: string;
-  startDate: string;
-  endDate: string;
-  capacity: number;
-};
+function titleFromSlug(slug: string) {
+  return slug
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
+async function getCourseSeoData(slug: string): Promise<{
+  title?: string;
+  description?: string;
+  image?: string;
+  priceInr?: number;
+} | null> {
+  const origin = getBackendOrigin();
+  if (!origin) return null;
+  const prefix = getBackendApiPrefix();
+  const encodedSlug = encodeURIComponent(slug);
+  const url = `${origin}${prefix}/Course/${encodedSlug}`;
+
+  try {
+    const res = await fetch(url, { next: { revalidate: 900 } });
+    if (!res.ok) return null;
+    const data = (await res.json()) as Record<string, unknown>;
+    return {
+      title:
+        typeof data.title === "string"
+          ? data.title
+          : typeof data.name === "string"
+            ? data.name
+            : undefined,
+      description:
+        typeof data.shortDescription === "string"
+          ? data.shortDescription
+          : typeof data.description === "string"
+            ? data.description
+            : undefined,
+      image:
+        typeof data.courseDetailCoverImage === "string"
+          ? data.courseDetailCoverImage
+          : typeof data.cardCoverImage === "string"
+            ? data.cardCoverImage
+            : undefined,
+      priceInr:
+        typeof data.upfrontInr === "number"
+          ? data.upfrontInr
+          : typeof data.price === "number"
+            ? data.price
+            : undefined,
+    };
+  } catch {
+    return null;
   }
-  return fallback;
 }
 
-function toBatch(raw: Record<string, unknown>, index: number): CourseBatch {
-  const id = toNumber(raw.id ?? raw.batchId, index + 1);
-  const mentorName =
-    typeof raw.mentorName === "string" && raw.mentorName.trim()
-      ? raw.mentorName.trim()
-      : "Faculty will be assigned";
-  const startDate =
-    typeof raw.startDate === "string" ? raw.startDate : String(raw.startDate ?? "");
-  const endDate =
-    typeof raw.endDate === "string" ? raw.endDate : String(raw.endDate ?? "");
-  const capacity = toNumber(raw.capacity, 0);
-  return { id, mentorName, startDate, endDate, capacity };
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const fallbackTitle = `${titleFromSlug(slug)} Course in India`;
+  const fallbackDescription =
+    "Explore BIM course details, syllabus, fees, and upcoming batches at LA BIM Academy.";
+  const seoData = await getCourseSeoData(slug);
+  const title = seoData?.title ?? fallbackTitle;
+  const description = seoData?.description ?? fallbackDescription;
+  const image = seoData?.image ?? "/images/hero-home.webp";
+  const canonicalPath = `/courses/${slug}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: canonicalPath },
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      url: canonicalPath,
+      images: [{ url: image, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  };
 }
 
-export default function CourseDetailPage({ params }: PageProps) {
-  const [courseCode, setCourseCode] = useState<string>("");
-  const [course, setCourse] = useState<Program | null>(null);
-  const [batches, setBatches] = useState<CourseBatch[]>([]);
-  const [batchesLoading, setBatchesLoading] = useState(false);
-  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void params.then((p) => {
-      if (!active) return;
-      setCourseCode(p.slug);
-    });
-    return () => {
-      active = false;
-    };
-  }, [params]);
-
-  useEffect(() => {
-    if (!courseCode) return;
-    let active = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    setError(null);
-    void getCourseById(courseCode).then((res) => {
-      if (!active) return;
-      if (!res.ok) {
-        setError(res.message);
-        setLoading(false);
-        return;
-      }
-      const body =
-        res.data && typeof res.data === "object"
-          ? (res.data as Record<string, unknown>)
-          : null;
-      if (!body) {
-        setError("Course details are unavailable.");
-        setLoading(false);
-        return;
-      }
-      setCourse(mapCourseToProgram(body, courseCode));
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [courseCode]);
-
-  useEffect(() => {
-    if (!course?.apiCourseId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setBatches([]);
-      setSelectedBatchId(null);
-      return;
-    }
-    let active = true;
-    setBatchesLoading(true);
-    void getBatchesForCourse(course.apiCourseId).then((res) => {
-      if (!active) return;
-      if (!res.ok) {
-        setBatches([]);
-        setBatchesLoading(false);
-        return;
-      }
-      const mapped = asRecordList(res.data)
-        .map(toBatch)
-        .filter((batch) => Number.isFinite(batch.id));
-      setBatches(mapped);
-      setSelectedBatchId(mapped[0]?.id ?? null);
-      setBatchesLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [course?.apiCourseId]);
-
-  const enrollHref = useMemo(
-    () =>
-      `/enroll?course=${encodeURIComponent(course?.id ?? courseCode)}${selectedBatchId ? `&batch=${encodeURIComponent(String(selectedBatchId))}` : ""}`,
-    [course?.id, selectedBatchId, courseCode],
-  );
-  const courseFeeInr = new Intl.NumberFormat("en-IN").format(
-    course?.upfrontInr && Number.isFinite(course.upfrontInr)
-      ? course.upfrontInr
-      : 0,
-  );
+export default async function CourseDetailPage({ params }: PageProps) {
+  const { slug } = await params;
+  const seoData = await getCourseSeoData(slug);
+  const title = seoData?.title ?? titleFromSlug(slug);
+  const description =
+    seoData?.description ??
+    "Explore BIM course details, syllabus, fees, and upcoming batches at LA BIM Academy.";
+  const image = seoData?.image ?? "/images/hero-home.webp";
+  const url = `https://labimacademy.com/courses/${encodeURIComponent(slug)}`;
+  const courseJsonLd = courseSchema({
+    name: title,
+    description,
+    url,
+    image,
+    priceInr: seoData?.priceInr,
+  });
+  const breadcrumbJsonLd = breadcrumbSchema([
+    { name: "Home", item: "https://labimacademy.com/" },
+    { name: "Courses", item: "https://labimacademy.com/courses" },
+    { name: title, item: url },
+  ]);
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-      <div className="mx-auto max-w-7xl">
-        <nav className="mb-8 text-sm">
-          <Link
-            href="/#courses"
-            className="font-semibold text-cyan-700 transition hover:text-cyan-600"
-          >
-            ← Featured courses
-          </Link>
-        </nav>
-        {loading ? (
-          <p className="text-sm text-slate-600">Loading course details...</p>
-        ) : null}
-        {error ? (
-          <p className="text-sm text-red-600">{error}</p>
-        ) : null}
-        {course && !loading ? (
-          <CourseDetailShowcase
-            course={course}
-            enrollHref={enrollHref}
-            courseFeeInr={courseFeeInr}
-            batches={batches}
-            batchesLoading={batchesLoading}
-            selectedBatchId={selectedBatchId}
-            onSelectBatch={(batchId) => setSelectedBatchId(batchId)}
-          />
-        ) : null}
-      </div>
-    </main>
+    <>
+      <JsonLd data={courseJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
+      <CourseDetailClient slug={slug} />
+    </>
   );
 }
