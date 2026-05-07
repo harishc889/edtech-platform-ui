@@ -8,6 +8,8 @@ import HomeFaqSection, { homeFaqs } from "./components/home-faq-section";
 import WhyLearnFromUs from "./components/why-learn-from-us";
 import { faqSchema } from "@/lib/seo/schemas";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "BIM Courses in India",
   description:
@@ -23,6 +25,7 @@ export default function Home() {
   return (
     <>
       <JsonLd data={faqJsonLd} />
+      <main>
       <section className="relative min-h-[28rem] overflow-hidden bg-slate-950 px-4 pb-20 pt-12 text-white sm:min-h-[32rem] sm:px-6 sm:pb-28 sm:pt-16 lg:min-h-[36rem] lg:px-8 lg:pb-32 lg:pt-20">
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <Image
@@ -127,6 +130,7 @@ export default function Home() {
       </section>
 
       <HomeFaqSection />
+      </main>
     </>
   );
 }

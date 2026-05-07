@@ -125,7 +125,7 @@ export default function SiteFooter() {
         </div>
         <div
           suppressHydrationWarning
-          className="mt-12 border-t border-slate-800 pt-8 text-center text-xs text-slate-500"
+          className="mt-12 border-t border-slate-800 pt-8 text-center text-xs text-slate-400"
         >
           © {new Date().getFullYear()} LA Bim Academy. All rights reserved.
         </div>
