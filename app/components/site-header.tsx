@@ -64,11 +64,19 @@ export default function SiteHeader() {
     }
     let active = true;
     setProgramsLoading(true);
-    void getCachedPrograms().then((rows) => {
-      if (!active) return;
-      setPrograms(rows);
-      setProgramsLoading(false);
-    });
+    void getCachedPrograms()
+      .then((rows) => {
+        if (!active) return;
+        setPrograms(rows);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPrograms([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setProgramsLoading(false);
+      });
     return () => {
       active = false;
     };
