@@ -7,8 +7,8 @@ const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/enroll"];
 function buildCsp(nonce: string) {
   const isDev = process.env.NODE_ENV !== "production";
   const scriptSrc = isDev
-    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
-    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:"
+    : "script-src 'self' 'unsafe-inline' https:";
 
   return [
     "default-src 'self'",
@@ -34,8 +34,6 @@ function withSecurityHeaders(response: NextResponse, csp: string) {
 export function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID()).replace(/=+$/g, "");
   const csp = buildCsp(nonce);
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
 
   const cookieName = process.env.AUTH_COOKIE_NAME || DEFAULT_COOKIE_NAME;
   const authCookie = request.cookies.get(cookieName)?.value;
@@ -55,11 +53,7 @@ export function proxy(request: NextRequest) {
   }
 
   return withSecurityHeaders(
-    NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    }),
+    NextResponse.next(),
     csp,
   );
 }
