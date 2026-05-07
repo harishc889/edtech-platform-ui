@@ -103,17 +103,25 @@ export default function CoursesCatalog() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setListLoading(true);
     setListError(null);
-    void getCachedPrograms().then((programs) => {
-      if (!active) return;
-      if (programs.length === 0) {
+    void getCachedPrograms()
+      .then((programs) => {
+        if (!active) return;
+        if (programs.length === 0) {
+          setListError("Unable to load courses right now. Please try again.");
+          setCourses([]);
+          return;
+        }
+        setCourses(programs.map((program, idx) => mapCourseCard(program, idx)));
+      })
+      .catch(() => {
+        if (!active) return;
         setListError("Unable to load courses right now. Please try again.");
         setCourses([]);
+      })
+      .finally(() => {
+        if (!active) return;
         setListLoading(false);
-        return;
-      }
-      setCourses(programs.map((program, idx) => mapCourseCard(program, idx)));
-      setListLoading(false);
-    });
+      });
     return () => {
       active = false;
     };

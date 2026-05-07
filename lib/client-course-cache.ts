@@ -22,12 +22,16 @@ export async function getCachedPrograms(): Promise<Program[]> {
   }
 
   inFlightPrograms = (async () => {
-    const response = await getPublishedCourses();
-    if (!response.ok) return [];
-    const mapped = asRecordList(response.data).map((row) => mapCourseToProgram(row));
-    cachedPrograms = mapped;
-    cacheExpiresAt = Date.now() + CACHE_TTL_MS;
-    return mapped;
+    try {
+      const response = await getPublishedCourses();
+      if (!response.ok) return [];
+      const mapped = asRecordList(response.data).map((row) => mapCourseToProgram(row));
+      cachedPrograms = mapped;
+      cacheExpiresAt = Date.now() + CACHE_TTL_MS;
+      return mapped;
+    } catch {
+      return [];
+    }
   })();
 
   try {
