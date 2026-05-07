@@ -4,7 +4,39 @@ import { NextResponse } from "next/server";
 const DEFAULT_COOKIE_NAME = "auth_token";
 const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/enroll"];
 
+function buildCsp(nonce: string) {
+  const isDev = process.env.NODE_ENV !== "production";
+  const scriptSrc = isDev
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+
+  return [
+    "default-src 'self'",
+    scriptSrc,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https:",
+    "connect-src 'self' https:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+    "upgrade-insecure-requests",
+    "trusted-types default",
+  ].join("; ");
+}
+
+function withSecurityHeaders(response: NextResponse, csp: string) {
+  response.headers.set("Content-Security-Policy", csp);
+  return response;
+}
+
 export function proxy(request: NextRequest) {
+  const nonce = btoa(crypto.randomUUID()).replace(/=+$/g, "");
+  const csp = buildCsp(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
   const cookieName = process.env.AUTH_COOKIE_NAME || DEFAULT_COOKIE_NAME;
   const authCookie = request.cookies.get(cookieName)?.value;
 
@@ -19,20 +51,22 @@ export function proxy(request: NextRequest) {
       request.nextUrl.pathname +
       (request.nextUrl.search ? request.nextUrl.search : "");
     loginUrl.searchParams.set("next", nextPath);
-    return NextResponse.redirect(loginUrl);
+    return withSecurityHeaders(NextResponse.redirect(loginUrl), csp);
   }
 
-  return NextResponse.next();
+  return withSecurityHeaders(
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    }),
+    csp,
+  );
 }
 
 export const config = {
   matcher: [
-    "/dashboard",
-    "/dashboard/:path*",
-    "/profile",
-    "/profile/:path*",
-    "/enroll",
-    "/enroll/:path*",
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
 };
 
