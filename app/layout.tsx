@@ -21,6 +21,9 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://labimacademy.com"),
+  verification: {
+    google: "26ykwKKtABrt_Qr-W9mdy4QM10-6egDm5szlR_fyKCU",
+  },
   title: {
     default: "LA BIM Academy | BIM Courses in India",
     template: "%s | LA BIM Academy",
