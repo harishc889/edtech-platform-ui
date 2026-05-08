@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EnrolledCoursePlayer from "@/app/components/enrolled-course-player";
 import {
   asRecordList,
@@ -38,6 +38,12 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
   const [certifications, setCertifications] = useState<
     ReturnType<typeof mapCertificationRow>[]
   >([]);
+  /**
+   * See dashboard page for rationale: only attach `?next=` when the user
+   * landed here logged out (initial visit), not when they explicitly logged
+   * out from an authenticated session.
+   */
+  const prevAuthStatusRef = useRef(authStatus);
 
   useEffect(() => {
     let active = true;
@@ -50,14 +56,22 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
     };
   }, [params]);
 
-  // Redirect once the shared auth context confirms the user is logged out.
+  // Auth gate. Mid-session logout → /login (no next). Initial visit while
+  // unauthenticated → /login?next=/dashboard/learn/<slug>.
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      prevAuthStatusRef.current = authStatus;
+      return;
+    }
     if (authStatus === "unauthenticated") {
+      const wasAuthenticated = prevAuthStatusRef.current === "authenticated";
       router.replace(
-        `/login?next=${encodeURIComponent(`/dashboard/learn/${encodeURIComponent(slug)}`)}`,
+        wasAuthenticated
+          ? "/login"
+          : `/login?next=${encodeURIComponent(`/dashboard/learn/${encodeURIComponent(slug)}`)}`,
       );
     }
+    prevAuthStatusRef.current = authStatus;
   }, [authStatus, router, slug]);
 
   useEffect(() => {

@@ -117,6 +117,13 @@ export default function DashboardPage() {
   >([]);
   const optimisticEnrollmentHintsRef = useRef<EnrollmentChangedDetail[]>([]);
   const lastRefreshAtRef = useRef(0);
+  /**
+   * Tracks the previous auth status so we can distinguish:
+   *  - "loading → unauthenticated": initial visit while logged out → preserve `next`.
+   *  - "authenticated → unauthenticated": mid-session logout / expiry → no `next`,
+   *    the user explicitly chose to leave.
+   */
+  const prevAuthStatusRef = useRef(authStatus);
   const enrolledCourseKeys = new Set(
     enrolledCourses.flatMap((course) => {
       const normalizedCode = normalizeKey(course.courseCode);
@@ -174,11 +181,18 @@ export default function DashboardPage() {
     };
   }, [refreshAuth]);
 
-  // Auth gate: redirect to /login the moment the provider says we're unauthenticated.
+  // Auth gate: redirect to /login when the provider says we're unauthenticated.
+  // - First-time visit (loading → unauthenticated) → keep `next=/dashboard` so
+  //   we can return after login.
+  // - Mid-session transition (authenticated → unauthenticated) → just /login,
+  //   the user pressed Logout (or session expired and the 401 interceptor will
+  //   add `next` itself).
   useEffect(() => {
     if (authStatus === "unauthenticated") {
-      router.replace("/login?next=/dashboard");
+      const wasAuthenticated = prevAuthStatusRef.current === "authenticated";
+      router.replace(wasAuthenticated ? "/login" : "/login?next=/dashboard");
     }
+    prevAuthStatusRef.current = authStatus;
   }, [authStatus, router]);
 
   // Derive enrolled courses + certifications from the shared /me payload.
