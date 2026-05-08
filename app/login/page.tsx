@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { fetchCurrentUser, login } from "@/lib/auth-service";
+import { useAuth } from "@/lib/auth-context";
+import { login } from "@/lib/auth-service";
 import { getSessionInactiveMessage } from "@/lib/auth-session-error";
 import {
   PasswordFieldWithToggle,
@@ -14,6 +15,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,15 +35,6 @@ export default function LoginPage() {
     setFormError(null);
 
     return !nextEmailError && !nextPasswordError;
-  }
-
-  async function ensureSessionReady() {
-    const first = await fetchCurrentUser();
-    if (first.ok) return true;
-
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    const second = await fetchCurrentUser();
-    return second.ok;
   }
 
   async function handleLogin(e: FormEvent) {
@@ -71,8 +64,16 @@ export default function LoginPage() {
         return;
       }
 
-      const sessionReady = await ensureSessionReady();
-      if (!sessionReady) {
+      // One /me call to confirm the cookie and load the profile into the
+      // shared auth context. If it returns null on the first try, retry once
+      // after a short delay (some browsers don't expose Set-Cookie immediately).
+      let profile = await auth.refresh();
+      if (!profile) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        profile = await auth.refresh();
+      }
+
+      if (!profile) {
         setFormError(
           "Login is taking longer than expected. Please try again in a moment.",
         );
@@ -87,7 +88,6 @@ export default function LoginPage() {
         nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
           ? nextPath
           : "/dashboard";
-      window.dispatchEvent(new Event("auth:changed"));
       router.push(redirectTo);
     } finally {
       setIsSubmitting(false);

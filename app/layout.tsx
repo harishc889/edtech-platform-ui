@@ -4,6 +4,7 @@ import { Inter, Poppins } from "next/font/google";
 import SiteFooter from "./components/site-footer";
 import SiteHeader from "./components/site-header";
 import { ToastProvider } from "./components/toast-provider";
+import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
 const inter = Inter({
@@ -81,10 +82,12 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col bg-slate-50 text-slate-900">
         <ToastProvider>
-          <SiteHeader />
-          <FloatingEnquiryCta />
-          <div className="flex-1">{children}</div>
-          <SiteFooter />
+          <AuthProvider>
+            <SiteHeader />
+            <FloatingEnquiryCta />
+            <div className="flex-1">{children}</div>
+            <SiteFooter />
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>

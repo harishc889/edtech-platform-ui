@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/app/components/toast-provider";
-import { fetchCurrentUser, logout, type AuthUser } from "@/lib/auth-service";
+import { useAuth } from "@/lib/auth-context";
+import { logout } from "@/lib/auth-service";
 import { getCachedPrograms } from "@/lib/client-course-cache";
 import type { Program } from "@/lib/program-catalog";
 
@@ -17,24 +18,19 @@ const navLinks = [
 
 export default function SiteHeader() {
   const router = useRouter();
-  const pathname = usePathname();
+  const { user: currentUser, status: authStatus, clear: clearAuth } = useAuth();
+  const checkingAuth = authStatus === "loading";
+  const isAuthenticated = authStatus === "authenticated" && currentUser !== null;
   const [open, setOpen] = useState(false);
   const [coursesOpen, setCoursesOpen] = useState(false);
   const [desktopCoursesOpen, setDesktopCoursesOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [authVersion, setAuthVersion] = useState(0);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [programsLoading, setProgramsLoading] = useState(false);
   const { showToast } = useToast();
   const desktopCoursesRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  /** First full auth resolution (initial page load). */
-  const initialAuthCheckDone = useRef(false);
-  /** Previous route — used to detect leaving /login or /register. */
-  const prevPathnameRef = useRef<string | null>(null);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -82,53 +78,6 @@ export default function SiteHeader() {
     };
   }, [coursesOpen, desktopCoursesOpen, programs.length, programsLoading]);
 
-  useEffect(() => {
-    function handleAuthChanged() {
-      setAuthVersion((v) => v + 1);
-    }
-    window.addEventListener("auth:changed", handleAuthChanged);
-    return () => window.removeEventListener("auth:changed", handleAuthChanged);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    async function loadCurrentUser() {
-      const previous = prevPathnameRef.current;
-      const wasOnAuthRoute =
-        previous !== null &&
-        (previous.startsWith("/login") || previous.startsWith("/register"));
-
-      const isAuthPage =
-        pathname.startsWith("/login") || pathname.startsWith("/register");
-
-      prevPathnameRef.current = pathname;
-
-      if (isAuthPage) {
-        setCurrentUser(null);
-        setCheckingAuth(false);
-        initialAuthCheckDone.current = true;
-        return;
-      }
-
-      // Show skeleton only on first paint or when leaving auth screens (user was cleared there).
-      // On other navigations, keep the last Login / profile UI until this fetch finishes — avoids flicker.
-      const comingFromAuthRoute = wasOnAuthRoute;
-      if (!initialAuthCheckDone.current || comingFromAuthRoute) {
-        setCheckingAuth(true);
-      }
-
-      const response = await fetchCurrentUser();
-      if (!active) return;
-      setCurrentUser(response.ok ? response.data ?? null : null);
-      setCheckingAuth(false);
-      initialAuthCheckDone.current = true;
-    }
-    void loadCurrentUser();
-    return () => {
-      active = false;
-    };
-  }, [pathname, authVersion]);
-
   function clearClientAuthArtifacts() {
     const removableKeys = [
       "token",
@@ -166,10 +115,9 @@ export default function SiteHeader() {
       logoutSuccessful = response.ok;
     } finally {
       clearClientAuthArtifacts();
-      setCurrentUser(null);
+      clearAuth();
       setProfileOpen(false);
       setOpen(false);
-      window.dispatchEvent(new Event("auth:changed"));
       showToast({
         type: logoutSuccessful ? "success" : "error",
         message: logoutSuccessful
@@ -276,12 +224,14 @@ export default function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-3 sm:flex">
-          <Link
-            href="/enroll"
-            className="rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 hover:shadow-cyan-500/35"
-          >
-            Enroll now
-          </Link>
+          {!isAuthenticated ? (
+            <Link
+              href="/enroll"
+              className="rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 hover:shadow-cyan-500/35"
+            >
+              Enroll now
+            </Link>
+          ) : null}
           {checkingAuth ? (
             <div className="h-9 w-24 animate-pulse rounded-full bg-slate-200" />
           ) : currentUser ? (
@@ -436,13 +386,15 @@ export default function SiteHeader() {
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/enroll"
-              className="rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-3 text-left text-sm font-semibold text-white"
-              onClick={() => setOpen(false)}
-            >
-              Enroll now
-            </Link>
+            {!isAuthenticated ? (
+              <Link
+                href="/enroll"
+                className="rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-3 text-left text-sm font-semibold text-white"
+                onClick={() => setOpen(false)}
+              >
+                Enroll now
+              </Link>
+            ) : null}
             {checkingAuth ? (
               <div className="mt-2 h-10 w-full animate-pulse rounded-xl bg-slate-100" />
             ) : currentUser ? (
