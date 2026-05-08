@@ -124,7 +124,8 @@ export default function SiteHeader() {
           ? "Logged out successfully."
           : "Logged out locally. Server logout failed.",
       });
-      router.push("/login");
+      // `replace` so the back button doesn't return to the authenticated page.
+      router.replace("/login");
       setIsLoggingOut(false);
     }
   }

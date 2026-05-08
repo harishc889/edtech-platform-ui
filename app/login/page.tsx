@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { login } from "@/lib/auth-service";
 import { getSessionInactiveMessage } from "@/lib/auth-session-error";
@@ -12,6 +12,18 @@ import {
   authLabelClass,
   authPrimaryButtonClass,
 } from "@/app/components/password-field-with-toggle";
+
+/**
+ * Reads the `?next=` query param and returns it only when it is a safe
+ * same-origin path (`/something`, never `//evil.com` or external URLs).
+ */
+function readSafeNextParam(): string | null {
+  if (typeof window === "undefined") return null;
+  const value = new URLSearchParams(window.location.search).get("next");
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,6 +37,18 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Single source of truth for "where to go once authenticated".
+  // Fires on:
+  //  (a) successful login (auth.refresh updated status to "authenticated"), or
+  //  (b) an already-logged-in user landing on /login by mistake.
+  // This avoids the race where router.push() is interrupted by a stale 401
+  // interceptor that hard-navigates back to /login.
+  useEffect(() => {
+    if (auth.status !== "authenticated") return;
+    const nextPath = readSafeNextParam();
+    router.replace(nextPath ?? "/dashboard");
+  }, [auth.status, router]);
 
   function validate(nextEmail: string, nextPassword: string) {
     const nextEmailError = nextEmail ? null : "Email is required.";
@@ -67,6 +91,8 @@ export default function LoginPage() {
       // One /me call to confirm the cookie and load the profile into the
       // shared auth context. If it returns null on the first try, retry once
       // after a short delay (some browsers don't expose Set-Cookie immediately).
+      // Once `auth.status` flips to "authenticated", the redirect useEffect
+      // above takes the user to `next` (or /dashboard).
       let profile = await auth.refresh();
       if (!profile) {
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -79,16 +105,6 @@ export default function LoginPage() {
         );
         return;
       }
-
-      const nextPath =
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("next")
-          : null;
-      const redirectTo =
-        nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
-          ? nextPath
-          : "/dashboard";
-      router.push(redirectTo);
     } finally {
       setIsSubmitting(false);
     }
