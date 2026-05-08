@@ -11,9 +11,11 @@ import {
 import { SelectField } from "@/app/components/select-field";
 import {
   type PaymentOption,
+  type Program,
 } from "@/lib/program-catalog";
 import { getBatchesForCourse } from "@/lib/batch-service";
-import { getCourseById, getPublishedCourses } from "@/lib/course-service";
+import { getCachedProgramsResult } from "@/lib/client-course-cache";
+import { getCourseById } from "@/lib/course-service";
 import {
   RAZORPAY_CHECKOUT_SCRIPT,
   runRazorpayPaymentFlow,
@@ -111,6 +113,18 @@ function mapCourseOption(raw: Record<string, unknown>, index: number): CourseOpt
     seatBookingInr,
     apiCourseId,
     defaultBatchId,
+  };
+}
+
+function programToCourseOption(program: Program): CourseOption {
+  return {
+    id: program.id,
+    courseCode: program.id,
+    title: program.title,
+    upfrontInr: program.upfrontInr,
+    seatBookingInr: program.seatBookingInr,
+    apiCourseId: program.apiCourseId,
+    defaultBatchId: program.defaultBatchId,
   };
 }
 
@@ -235,16 +249,15 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
     let active = true;
     setCourseLoading(true);
     setCourseLoadError(null);
-    void getPublishedCourses().then((res) => {
+    void getCachedProgramsResult().then((res) => {
       if (!active) return;
       if (!res.ok) {
         setCourseOptions([]);
-        setCourseLoadError(res.message);
+        setCourseLoadError(res.message ?? "Failed to load courses.");
         setCourseLoading(false);
         return;
       }
-      const rows = asRecordList(res.data);
-      const mapped = rows.map(mapCourseOption).filter((c) => !!c.id);
+      const mapped = res.programs.map(programToCourseOption).filter((c) => !!c.id);
       setCourseOptions(mapped);
       setCourseLoading(false);
     });
