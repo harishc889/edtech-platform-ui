@@ -1,6 +1,4 @@
-import { asRecordList } from "@/lib/api-normalize";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
-import { getPublishedCourses } from "@/lib/course-service";
+import { getCachedPrograms } from "@/lib/client-course-cache";
 import type { EnrollmentRow } from "@/lib/enrollment-map";
 import type { Program } from "@/lib/program-catalog";
 
@@ -30,6 +28,8 @@ export function learnHrefForEnrollment(
 
 /**
  * Learn URL segment may be numeric (enrollment fallback). Map to API courseCode/slug.
+ * Uses the shared client-side course cache so we don't hit `/api/Course` again
+ * if another component (header, dashboard, enroll form) already loaded it.
  */
 export async function resolveLearnSlugToCourseCode(slug: string): Promise<string> {
   const trimmed = decodeURIComponent(slug).trim();
@@ -37,12 +37,8 @@ export async function resolveLearnSlugToCourseCode(slug: string): Promise<string
   if (!/^\d+$/.test(trimmed)) return trimmed;
 
   const targetId = Number(trimmed);
-  const res = await getPublishedCourses();
-  if (!res.ok) return trimmed;
-
-  const rows = asRecordList(res.data);
-  for (const row of rows) {
-    const program = mapCourseToProgram(row);
+  const programs = await getCachedPrograms();
+  for (const program of programs) {
     if (program.apiCourseId === targetId) return program.id;
   }
 

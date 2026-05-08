@@ -10,12 +10,11 @@ import {
 } from "@/lib/api-normalize";
 import { useAuth } from "@/lib/auth-context";
 import { getBatchesForCourse } from "@/lib/batch-service";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import { getCachedProgramsResult } from "@/lib/client-course-cache";
 import {
   getLearnCourseSlugForEnrollment,
   learnHrefForEnrollment,
 } from "@/lib/learn-course-route";
-import { getPublishedCourses } from "@/lib/course-service";
 import { getMyEnrolledCourses } from "@/lib/enroll-service";
 import {
   mapEnrollmentRow,
@@ -25,6 +24,7 @@ import {
   certificationsFromMePayload,
   mapCertificationRow,
 } from "@/lib/me-certifications";
+import type { Program } from "@/lib/program-catalog";
 
 type EnrollmentChangedDetail = {
   courseId: string;
@@ -107,9 +107,7 @@ export default function DashboardPage() {
     ReturnType<typeof mapCertificationRow>[]
   >([]);
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(true);
-  const [browseCourses, setBrowseCourses] = useState<
-    Array<ReturnType<typeof mapCourseToProgram>>
-  >([]);
+  const [browseCourses, setBrowseCourses] = useState<Program[]>([]);
   const [browseLoading, setBrowseLoading] = useState(true);
   const [nextBatchByCourseId, setNextBatchByCourseId] = useState<
     Record<string, NextBatchPreview>
@@ -246,15 +244,9 @@ export default function DashboardPage() {
     let active = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setBrowseLoading(true);
-    void getPublishedCourses().then((res) => {
+    void getCachedProgramsResult().then((res) => {
       if (!active) return;
-      if (!res.ok) {
-        setBrowseCourses([]);
-        setBrowseLoading(false);
-        return;
-      }
-      const rows = asRecordList(res.data);
-      setBrowseCourses(rows.map((row) => mapCourseToProgram(row)));
+      setBrowseCourses(res.programs);
       setBrowseLoading(false);
     });
     return () => {
