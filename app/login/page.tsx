@@ -38,12 +38,14 @@ export default function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Single source of truth for "where to go once authenticated".
-  // Fires on:
-  //  (a) successful login (auth.refresh updated status to "authenticated"), or
-  //  (b) an already-logged-in user landing on /login by mistake.
-  // This avoids the race where router.push() is interrupted by a stale 401
-  // interceptor that hard-navigates back to /login.
+  // Safety net: if an already-logged-in user lands on /login (typed URL,
+  // hit back, opened in new tab, etc.), bounce them to `next` or /dashboard.
+  //
+  // The post-submit redirect itself is done imperatively inside
+  // `handleLogin` — relying on this effect alone caused a real bug where
+  // the URL stayed on /login after login with `?next=...`. The header
+  // flipped to "Profile" but the form remained, requiring a manual
+  // refresh.
   useEffect(() => {
     if (auth.status !== "authenticated") return;
     const nextPath = readSafeNextParam();
@@ -91,8 +93,6 @@ export default function LoginPage() {
       // One /me call to confirm the cookie and load the profile into the
       // shared auth context. If it returns null on the first try, retry once
       // after a short delay (some browsers don't expose Set-Cookie immediately).
-      // Once `auth.status` flips to "authenticated", the redirect useEffect
-      // above takes the user to `next` (or /dashboard).
       let profile = await auth.refresh();
       if (!profile) {
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -105,6 +105,13 @@ export default function LoginPage() {
         );
         return;
       }
+
+      // Imperative redirect — do not rely on the useEffect alone.
+      // If we wait for the next render to fire it, the navigation can race
+      // with `setIsSubmitting(false)` / unrelated state churn and end up
+      // committed but invisible (URL stays on /login until manual refresh).
+      const nextPath = readSafeNextParam();
+      router.replace(nextPath ?? "/dashboard");
     } finally {
       setIsSubmitting(false);
     }

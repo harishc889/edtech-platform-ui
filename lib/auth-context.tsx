@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -12,6 +13,11 @@ import {
 } from "react";
 import { profileFromMePayload } from "@/lib/api-normalize";
 import { fetchCurrentUser, type AuthUser } from "@/lib/auth-service";
+
+// `useLayoutEffect` warns during SSR. Fall back to `useEffect` on the server,
+// where it's a no-op anyway.
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
  * Single source of truth for client-side auth state.
@@ -31,6 +37,13 @@ import { fetchCurrentUser, type AuthUser } from "@/lib/auth-service";
  * - Cross-tab sync via the `storage` event.
  * - Automatic clear on `auth:session-inactive` (dispatched by the axios 401
  *   interceptor in `lib/api.ts`).
+ *
+ * Hydration note:
+ * - Initial state is intentionally `{ user: null, status: "loading" }` on
+ *   both server and client so the SSR HTML matches the first client render.
+ * - sessionStorage hydration happens in a `useLayoutEffect` immediately after
+ *   mount so the cached user appears in the same paint as hydration — no
+ *   logged-out flicker, no hydration mismatch warning.
  *
  * Components should call `useAuth()` instead of `fetchCurrentUser()` directly.
  */
@@ -82,14 +95,13 @@ function writeCachedUser(user: AuthUser | null) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Optimistically hydrate from sessionStorage so the header doesn't flicker
-  // back to "Login" on hard refresh while `/me` is in flight.
-  const [user, setUserState] = useState<AuthUser | null>(() => readCachedUser());
+  // Initial state must match between server and client to avoid hydration
+  // mismatches. The cached user is read from sessionStorage in the layout
+  // effect below — that runs synchronously after the first commit on the
+  // client and before paint, so the user does NOT see a logged-out flicker.
+  const [user, setUserState] = useState<AuthUser | null>(null);
   const [mePayload, setMePayload] = useState<unknown>(null);
-  const [status, setStatus] = useState<AuthStatus>(() => {
-    if (typeof window === "undefined") return "loading";
-    return readCachedUser() ? "authenticated" : "loading";
-  });
+  const [status, setStatus] = useState<AuthStatus>("loading");
 
   /** Coalesces concurrent refresh() callers into a single in-flight request. */
   const inFlightRef = useRef<Promise<AuthUser | null> | null>(null);
@@ -143,7 +155,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     writeCachedUser(null);
   }, []);
 
-  // Bootstrap once on mount.
+  // Hydrate from sessionStorage immediately after mount, before paint, so a
+  // returning user sees the header in its authenticated state on the very
+  // first frame instead of a "Login" flash. Runs only on the client.
+  useIsomorphicLayoutEffect(() => {
+    const cached = readCachedUser();
+    if (cached) {
+      setUserState(cached);
+      setStatus("authenticated");
+    }
+  }, []);
+
+  // Bootstrap once on mount: validate the cookie against the server.
   useEffect(() => {
     void refresh();
   }, [refresh]);

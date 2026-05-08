@@ -4,7 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { asRecordList } from "@/lib/api-normalize";
-import { City, Country, State as GeoState } from "country-state-city";
+import type { ICity, ICountry, IState } from "country-state-city";
 import {
   authSelectClass,
 } from "@/app/components/password-field-with-toggle";
@@ -20,6 +20,8 @@ import {
   RAZORPAY_CHECKOUT_SCRIPT,
   runRazorpayPaymentFlow,
 } from "@/lib/razorpay-checkout-flow";
+
+type CountryStateCityModule = typeof import("country-state-city");
 
 const ENROLLMENT_TERMS = [
   "Available seats are limited and filled on a first-come, first-served basis.",
@@ -178,29 +180,44 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
   const [batchId, setBatchId] = useState(initialBatchId ?? "");
   const [selectedCourseDetail, setSelectedCourseDetail] =
     useState<CourseOption | null>(null);
-  const countryOptions = useMemo(
-    () => Country.getAllCountries().sort((a, b) => a.name.localeCompare(b.name)),
-    [],
-  );
-  const indiaCountry = useMemo(
+  const [csc, setCsc] = useState<CountryStateCityModule | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void import("country-state-city").then((mod) => {
+      if (cancelled) return;
+      setCsc(mod);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const countryOptions = useMemo<ICountry[]>(() => {
+    if (!csc) return [];
+    return csc.Country.getAllCountries().sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [csc]);
+  const indiaCountry = useMemo<ICountry | null>(
     () => countryOptions.find((c) => c.name === "India") ?? null,
     [countryOptions],
   );
-  const stateOptions = useMemo(() => {
-    if (country !== "India" || !indiaCountry) return [];
-    return GeoState.getStatesOfCountry(indiaCountry.isoCode).sort((a, b) =>
+  const stateOptions = useMemo<IState[]>(() => {
+    if (!csc || country !== "India" || !indiaCountry) return [];
+    return csc.State.getStatesOfCountry(indiaCountry.isoCode).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-  }, [country, indiaCountry]);
-  const cityOptions = useMemo(() => {
-    if (country !== "India" || !indiaCountry || !stateValue) return [];
+  }, [csc, country, indiaCountry]);
+  const cityOptions = useMemo<ICity[]>(() => {
+    if (!csc || country !== "India" || !indiaCountry || !stateValue) return [];
     const selectedState = stateOptions.find((s) => s.name === stateValue);
     if (!selectedState) return [];
-    return City.getCitiesOfState(
+    return csc.City.getCitiesOfState(
       indiaCountry.isoCode,
       selectedState.isoCode,
     ).sort((a, b) => a.name.localeCompare(b.name));
-  }, [country, indiaCountry, stateOptions, stateValue]);
+  }, [csc, country, indiaCountry, stateOptions, stateValue]);
   const isIndia = country === "India";
 
   const program = useMemo(
