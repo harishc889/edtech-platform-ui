@@ -7,9 +7,8 @@ import CourseCard from "@/app/components/course-card";
 import {
   asRecordList,
   enrollmentsFromMePayload,
-  profileFromMePayload,
 } from "@/lib/api-normalize";
-import { fetchCurrentUser, type AuthUser } from "@/lib/auth-service";
+import { useAuth } from "@/lib/auth-context";
 import { getBatchesForCourse } from "@/lib/batch-service";
 import { mapCourseToProgram } from "@/lib/course-program-adapter";
 import {
@@ -98,8 +97,8 @@ function ProgressBar({ value }: { value: number }) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const { user: currentUser, mePayload, status: authStatus, refresh: refreshAuth } =
+    useAuth();
   const [activeTab, setActiveTab] = useState<"courses" | "certifications" | "browse">("courses");
   const [enrolledCourses, setEnrolledCourses] = useState<
     ReturnType<typeof mapEnrollmentRow>[]
@@ -107,6 +106,7 @@ export default function DashboardPage() {
   const [certifications, setCertifications] = useState<
     ReturnType<typeof mapCertificationRow>[]
   >([]);
+  const [enrollmentsLoading, setEnrollmentsLoading] = useState(true);
   const [browseCourses, setBrowseCourses] = useState<
     Array<ReturnType<typeof mapCourseToProgram>>
   >([]);
@@ -117,7 +117,6 @@ export default function DashboardPage() {
   const [optimisticEnrollmentHints, setOptimisticEnrollmentHints] = useState<
     EnrollmentChangedDetail[]
   >([]);
-  const [refreshEnrollmentsTick, setRefreshEnrollmentsTick] = useState(0);
   const optimisticEnrollmentHintsRef = useRef<EnrollmentChangedDetail[]>([]);
   const lastRefreshAtRef = useRef(0);
   const enrolledCourseKeys = new Set(
@@ -142,9 +141,10 @@ export default function DashboardPage() {
   useEffect(() => {
     function requestEnrollmentRefresh() {
       const now = Date.now();
+      // Throttle: avoid spamming /me if multiple events fire close together.
       if (now - lastRefreshAtRef.current < 1000) return;
       lastRefreshAtRef.current = now;
-      setRefreshEnrollmentsTick((v) => v + 1);
+      void refreshAuth();
     }
 
     function handleEnrollmentChanged(event: Event) {
@@ -174,23 +174,25 @@ export default function DashboardPage() {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [refreshAuth]);
+
+  // Auth gate: redirect to /login the moment the provider says we're unauthenticated.
   useEffect(() => {
+    if (authStatus === "unauthenticated") {
+      router.replace("/login?next=/dashboard");
+    }
+  }, [authStatus, router]);
+
+  // Derive enrolled courses + certifications from the shared /me payload.
+  // If the payload doesn't carry enrollments, fall back once to /Enroll/my-courses.
+  useEffect(() => {
+    if (authStatus !== "authenticated") return;
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEnrollmentsLoading(true);
 
-    async function loadMe() {
-      const response = await fetchCurrentUser();
-      if (!active) return;
-
-      if (!response.ok) {
-        router.push("/login");
-        return;
-      }
-
-      const payload = response.data;
-      const profile = profileFromMePayload(payload) as AuthUser | null;
-      setCurrentUser(profile);
-      const meRows = enrollmentsFromMePayload(payload);
+    async function buildEnrollments() {
+      const meRows = enrollmentsFromMePayload(mePayload);
       let fallbackRows: Record<string, unknown>[] = [];
       if (meRows.length === 0) {
         const fallbackResponse = await getMyEnrolledCourses();
@@ -227,17 +229,18 @@ export default function DashboardPage() {
           nextSession: "—",
         });
       });
+      if (!active) return;
       setEnrolledCourses(withOptimisticHints);
-      const certRows = certificationsFromMePayload(payload);
+      const certRows = certificationsFromMePayload(mePayload);
       setCertifications(certRows.map(mapCertificationRow));
-      setLoadingUser(false);
+      setEnrollmentsLoading(false);
     }
 
-    void loadMe();
+    void buildEnrollments();
     return () => {
       active = false;
     };
-  }, [router, refreshEnrollmentsTick]);
+  }, [authStatus, mePayload]);
 
   useEffect(() => {
     let active = true;
@@ -285,7 +288,7 @@ export default function DashboardPage() {
     };
   }, [browseCourses]);
 
-  if (loadingUser) {
+  if (authStatus === "loading" || (authStatus === "authenticated" && enrollmentsLoading)) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-mesh px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-6xl">
@@ -297,6 +300,11 @@ export default function DashboardPage() {
         </div>
       </main>
     );
+  }
+
+  if (authStatus === "unauthenticated") {
+    // Redirect effect above will run; render nothing meanwhile.
+    return null;
   }
 
   return (

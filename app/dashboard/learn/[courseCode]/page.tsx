@@ -8,7 +8,7 @@ import {
   asRecordList,
   enrollmentsFromMePayload,
 } from "@/lib/api-normalize";
-import { fetchCurrentUser } from "@/lib/auth-service";
+import { useAuth } from "@/lib/auth-context";
 import { mapCourseToProgram } from "@/lib/course-program-adapter";
 import { resolveLearnSlugToCourseCode } from "@/lib/learn-course-route";
 import { getCourseById } from "@/lib/course-service";
@@ -29,6 +29,7 @@ type PageProps = {
 
 export default function DashboardLearnCoursePage({ params }: PageProps) {
   const router = useRouter();
+  const { mePayload, status: authStatus } = useAuth();
   const [slug, setSlug] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +50,20 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
     };
   }, [params]);
 
+  // Redirect once the shared auth context confirms the user is logged out.
   useEffect(() => {
     if (!slug) return;
+    if (authStatus === "unauthenticated") {
+      router.replace(
+        `/login?next=${encodeURIComponent(`/dashboard/learn/${encodeURIComponent(slug)}`)}`,
+      );
+    }
+  }, [authStatus, router, slug]);
+
+  useEffect(() => {
+    if (!slug) return;
+    if (authStatus !== "authenticated") return;
+
     let active = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
@@ -58,15 +71,7 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
     setCourse(null);
 
     async function run() {
-      const auth = await fetchCurrentUser();
-      if (!active) return;
-      if (!auth.ok) {
-        router.replace(`/login?next=${encodeURIComponent(`/dashboard/learn/${encodeURIComponent(slug)}`)}`);
-        return;
-      }
-
-      const payload = auth.data;
-      const meRows = enrollmentsFromMePayload(payload);
+      const meRows = enrollmentsFromMePayload(mePayload);
       let fallbackRows: Record<string, unknown>[] = [];
       if (meRows.length === 0) {
         const fallbackResponse = await getMyEnrolledCourses();
@@ -85,7 +90,7 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
         return true;
       });
 
-      const certRows = certificationsFromMePayload(payload);
+      const certRows = certificationsFromMePayload(mePayload);
       setCertifications(certRows.map(mapCertificationRow));
 
       const courseCodeForApi = await resolveLearnSlugToCourseCode(slug);
@@ -122,7 +127,7 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
     return () => {
       active = false;
     };
-  }, [router, slug]);
+  }, [authStatus, mePayload, router, slug]);
 
   if (!slug || loading) {
     return (
