@@ -233,7 +233,7 @@ export default function CoursesCatalog() {
 
         <section className="mt-12">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => {
+            {courses.map((course, index) => {
               const nextBatch = (course.nextBatch ?? null) as ProgramNextBatch | null;
               return (
                 <CourseCard
@@ -250,6 +250,7 @@ export default function CoursesCatalog() {
                   cardCoverImage={course.cardCoverImage}
                   programHref={`/courses/${encodeURIComponent(course.id)}`}
                   enrollHref={`/enroll?course=${encodeURIComponent(course.id)}${nextBatch ? `&batch=${encodeURIComponent(String(nextBatch.id))}` : ""}`}
+                  imagePriority={index < 2}
                 />
               );
             })}

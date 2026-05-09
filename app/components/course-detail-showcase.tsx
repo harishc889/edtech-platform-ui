@@ -107,13 +107,19 @@ export default function CourseDetailShowcase({
   return (
     <article className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50">
       <section className="relative overflow-hidden px-6 py-12 text-white sm:px-10 sm:py-14">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          aria-hidden
-          style={{
-            backgroundImage: `url(${course.courseDetailCoverImage})`,
-          }}
-        />
+        {course.courseDetailCoverImage ? (
+          <Image
+            src={course.courseDetailCoverImage}
+            alt=""
+            fill
+            priority
+            quality={68}
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-100 via-white to-slate-100" />
+        )}
         <div
           className="pointer-events-none absolute inset-0"
           aria-hidden
@@ -468,12 +474,14 @@ export default function CourseDetailShowcase({
 
       <section className="border-t border-slate-100 px-6 py-10 sm:px-10">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-slate-200/80 shadow-md">
-          <div
-            className="absolute inset-0 bg-cover bg-[center_right] sm:bg-center"
-            aria-hidden
-            style={{
-              backgroundImage: "url('/images/placement-assistance-bg.webp')",
-            }}
+          <Image
+            src="/images/placement-assistance-bg.webp"
+            alt=""
+            fill
+            loading="lazy"
+            quality={60}
+            sizes="(max-width: 1024px) 100vw, 1152px"
+            className="object-cover object-right sm:object-center"
           />
           <div
             className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/95 via-white/88 to-white/25 md:bg-gradient-to-r md:from-white/95 md:via-white/85 md:to-transparent"

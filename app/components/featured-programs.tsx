@@ -49,7 +49,7 @@ export default function FeaturedPrograms() {
         </div>
 
         <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-10">
-          {programs.map((program) => {
+          {programs.map((program, index) => {
             const programHref = `/courses/${program.id}`;
             const nextBatch = program.nextBatch;
             const enrollHref = `/enroll?course=${encodeURIComponent(program.id)}${nextBatch?.id ? `&batch=${encodeURIComponent(String(nextBatch.id))}` : ""}`;
@@ -68,6 +68,7 @@ export default function FeaturedPrograms() {
                 cardCoverImage={program.cardCoverImage}
                 programHref={programHref}
                 enrollHref={enrollHref}
+                imagePriority={index < 3}
               />
             );
           })}
