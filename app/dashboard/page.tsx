@@ -448,7 +448,7 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500">Loading available courses...</p>
             ) : (
               <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                {browseCourses.map((course) => {
+                {browseCourses.map((course, index) => {
                   const nextBatch = (course.nextBatch ?? null) as NextBatchPreview | null;
                   const isEnrolled =
                     enrolledCourseKeys.has(course.id) ||
@@ -472,6 +472,7 @@ export default function DashboardPage() {
                       programHref={`/courses/${encodeURIComponent(course.id)}`}
                       enrollHref={`/enroll?course=${encodeURIComponent(course.id)}${nextBatch ? `&batch=${encodeURIComponent(String(nextBatch.id))}` : ""}`}
                       isEnrolled={isEnrolled}
+                      imagePriority={index < 2}
                     />
                   );
                 })}

@@ -13,6 +13,7 @@ type CourseCardProps = {
   programHref: string;
   enrollHref: string;
   isEnrolled?: boolean;
+  imagePriority?: boolean;
 };
 
 export default function CourseCard({
@@ -25,6 +26,7 @@ export default function CourseCard({
   programHref,
   enrollHref,
   isEnrolled = false,
+  imagePriority = false,
 }: CourseCardProps) {
   const coverSrc = cardCoverImage?.trim() ?? "";
   const hasCoverImage = coverSrc.length > 0;
@@ -45,7 +47,8 @@ export default function CourseCard({
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             quality={68}
-            loading="lazy"
+            priority={imagePriority}
+            loading={imagePriority ? "eager" : "lazy"}
             className="object-cover object-center"
           />
         ) : null}
