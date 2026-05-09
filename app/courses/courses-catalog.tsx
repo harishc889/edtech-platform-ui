@@ -5,11 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import CourseCard from "@/app/components/course-card";
 import { asRecordList } from "@/lib/api-normalize";
-import { getBatchesForCourse } from "@/lib/batch-service";
 import { mapCourseToProgram } from "@/lib/course-program-adapter";
 import { getCachedPrograms } from "@/lib/client-course-cache";
 import { getCourseById } from "@/lib/course-service";
 import { enrollInBatch } from "@/lib/enroll-service";
+import type { ProgramNextBatch } from "@/lib/program-catalog";
 
 type NextBatchPreview = {
   id: number;
@@ -72,6 +72,7 @@ function mapCourseCard(program: ReturnType<typeof mapCourseToProgram>, index: nu
     eligibility: program.eligibility,
     cardCoverImage: program.cardCoverImage,
     apiCourseId: program.apiCourseId,
+    nextBatch: program.nextBatch,
   };
 }
 
@@ -84,9 +85,6 @@ export default function CoursesCatalog() {
   );
   const [listError, setListError] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(true);
-  const [nextBatchByCourseId, setNextBatchByCourseId] = useState<
-    Record<string, NextBatchPreview>
-  >({});
 
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -127,32 +125,6 @@ export default function CoursesCatalog() {
     };
   }, []);
 
-  useEffect(() => {
-    if (courses.length === 0) return;
-    let active = true;
-    void Promise.all(
-      courses.map(async (course) => {
-        if (!course.apiCourseId) return { courseId: course.id, nextBatch: null };
-        const res = await getBatchesForCourse(course.apiCourseId);
-        if (!res.ok) return { courseId: course.id, nextBatch: null };
-        return {
-          courseId: course.id,
-          nextBatch: pickNearestBatch(asRecordList(res.data)),
-        };
-      }),
-    ).then((results) => {
-      if (!active) return;
-      const mapped: Record<string, NextBatchPreview> = {};
-      results.forEach((entry) => {
-        if (entry.nextBatch) mapped[entry.courseId] = entry.nextBatch;
-      });
-      setNextBatchByCourseId(mapped);
-    });
-    return () => {
-      active = false;
-    };
-  }, [courses]);
-
   const loadDetail = useCallback(async (courseCode: string, apiCourseId?: number) => {
     setDetailLoading(true);
     setDetailError(null);
@@ -160,13 +132,7 @@ export default function CoursesCatalog() {
     setBatches([]);
     setEnrollMessage(null);
 
-    const batchCourseId = Number.isFinite(apiCourseId) && (apiCourseId ?? 0) > 0
-      ? String(apiCourseId)
-      : courseCode;
-    const [courseRes, batchRes] = await Promise.all([
-      getCourseById(courseCode),
-      getBatchesForCourse(batchCourseId),
-    ]);
+    const courseRes = await getCourseById(courseCode);
 
     if (!courseRes.ok) {
       setDetailError(courseRes.message);
@@ -181,9 +147,20 @@ export default function CoursesCatalog() {
         : null,
     );
 
-    if (batchRes.ok) {
-      setBatches(asRecordList(batchRes.data));
-    }
+    const bodyRecord =
+      body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+    const program = bodyRecord ? mapCourseToProgram(bodyRecord) : null;
+    const mappedBatches = Array.isArray(program?.batches)
+      ? program.batches.map((batch) => ({
+          id: batch.id,
+          courseId: batch.courseId,
+          startDate: batch.startDate,
+          endDate: batch.endDate,
+          mentorName: batch.mentorName ?? "",
+          capacity: batch.capacity,
+        }))
+      : [];
+    setBatches(mappedBatches);
 
     setDetailLoading(false);
   }, []);
@@ -257,7 +234,7 @@ export default function CoursesCatalog() {
         <section className="mt-12">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {courses.map((course) => {
-              const nextBatch = nextBatchByCourseId[course.id];
+              const nextBatch = (course.nextBatch ?? null) as ProgramNextBatch | null;
               return (
                 <CourseCard
                   key={course.id}

@@ -2,25 +2,8 @@
 
 import { useEffect, useState } from "react";
 import CourseCard from "@/app/components/course-card";
-import { asRecordList } from "@/lib/api-normalize";
-import { getBatchesForCourse } from "@/lib/batch-service";
 import { getCachedPrograms } from "@/lib/client-course-cache";
 import type { Program } from "@/lib/program-catalog";
-
-type NextBatchPreview = {
-  id: number;
-  startDate: string;
-  capacity: number;
-};
-
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
 
 function formatBatchDate(value: string) {
   if (!value) return "TBA";
@@ -33,40 +16,8 @@ function formatBatchDate(value: string) {
   }).format(dt);
 }
 
-function pickNearestBatch(rows: Record<string, unknown>[]): NextBatchPreview | null {
-  if (rows.length === 0) return null;
-  const now = Date.now();
-  const parsed = rows
-    .map((row, idx) => {
-      const id = toNumber(row.id ?? row.batchId, idx + 1);
-      const startDateRaw =
-        typeof row.startDate === "string" ? row.startDate : String(row.startDate ?? "");
-      const timestamp = startDateRaw ? new Date(startDateRaw).getTime() : Number.NaN;
-      const capacity = toNumber(row.capacity, 0);
-      return { id, startDate: startDateRaw, timestamp, capacity };
-    })
-    .filter((item) => Number.isFinite(item.id));
-
-  if (parsed.length === 0) return null;
-  const upcoming = parsed
-    .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= now)
-    .sort((a, b) => a.timestamp - b.timestamp);
-  const fallback = parsed
-    .filter((item) => Number.isFinite(item.timestamp))
-    .sort((a, b) => a.timestamp - b.timestamp);
-  const best = upcoming[0] ?? fallback[0] ?? parsed[0];
-  return {
-    id: best.id,
-    startDate: best.startDate,
-    capacity: best.capacity,
-  };
-}
-
 export default function FeaturedPrograms() {
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [nextBatchByCourseId, setNextBatchByCourseId] = useState<
-    Record<string, NextBatchPreview>
-  >({});
 
   useEffect(() => {
     let active = true;
@@ -78,33 +29,6 @@ export default function FeaturedPrograms() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (programs.length === 0) return;
-    let active = true;
-    void Promise.all(
-      programs.map(async (program) => {
-        const courseId = program.apiCourseId;
-        if (!courseId) return { programId: program.id, nextBatch: null };
-        const res = await getBatchesForCourse(courseId);
-        if (!res.ok) return { programId: program.id, nextBatch: null };
-        const rows = asRecordList(res.data);
-        return { programId: program.id, nextBatch: pickNearestBatch(rows) };
-      }),
-    ).then((results) => {
-      if (!active) return;
-      const mapped: Record<string, NextBatchPreview> = {};
-      results.forEach((item) => {
-        if (item.nextBatch) {
-          mapped[item.programId] = item.nextBatch;
-        }
-      });
-      setNextBatchByCourseId(mapped);
-    });
-    return () => {
-      active = false;
-    };
-  }, [programs]);
 
   return (
     <section
@@ -127,8 +51,8 @@ export default function FeaturedPrograms() {
         <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-10">
           {programs.map((program) => {
             const programHref = `/courses/${program.id}`;
-            const nextBatch = nextBatchByCourseId[program.id];
-            const enrollHref = `/enroll?course=${encodeURIComponent(program.id)}${nextBatch ? `&batch=${encodeURIComponent(String(nextBatch.id))}` : ""}`;
+            const nextBatch = program.nextBatch;
+            const enrollHref = `/enroll?course=${encodeURIComponent(program.id)}${nextBatch?.id ? `&batch=${encodeURIComponent(String(nextBatch.id))}` : ""}`;
             return (
               <CourseCard
                 key={program.id}

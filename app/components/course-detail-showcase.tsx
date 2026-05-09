@@ -79,7 +79,6 @@ export default function CourseDetailShowcase({
     { title: "Language", value: course.language },
     { title: "Mode", value: course.mode },
   ];
-  console.log("stats", stats);
   const seatBookingDisplay = useMemo(
     () => new Intl.NumberFormat("en-IN").format(course.seatBookingInr),
     [course.seatBookingInr],
