@@ -17,6 +17,7 @@ function buildCsp(nonce: string) {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https:",
     "connect-src 'self' https:",
+    "frame-src 'self' https://checkout.razorpay.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
