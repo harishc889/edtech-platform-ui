@@ -107,11 +107,12 @@ export default function LoginPage() {
       }
 
       // Imperative redirect — do not rely on the useEffect alone.
-      // If we wait for the next render to fire it, the navigation can race
-      // with `setIsSubmitting(false)` / unrelated state churn and end up
-      // committed but invisible (URL stays on /login until manual refresh).
+      // Use a hard navigation so middleware sees the fresh auth cookie on the
+      // very next request. Client-side router transitions can occasionally
+      // race with cookie persistence on some browsers and get stuck on /login
+      // until a manual refresh.
       const nextPath = readSafeNextParam();
-      router.replace(nextPath ?? "/dashboard");
+      window.location.assign(nextPath ?? "/dashboard");
     } finally {
       setIsSubmitting(false);
     }

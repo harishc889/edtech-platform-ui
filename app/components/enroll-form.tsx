@@ -893,7 +893,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
               {[
                 { id: "upfront", label: "Upfront Payment" },
                 { id: "book-slot", label: "Book Slot" },
-                { id: "emi", label: "EMI Options" },
+                // { id: "emi", label: "EMI Options" },
               ].map((mode) => (
                 <label
                   key={mode.id}
