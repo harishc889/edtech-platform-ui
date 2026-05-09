@@ -27,6 +27,21 @@ export type CourseModule = {
   resources?: CourseResourceLink[];
 };
 
+export type ProgramBatch = {
+  id: number;
+  courseId: number;
+  startDate: string;
+  endDate: string;
+  mentorName?: string;
+  capacity: number;
+};
+
+export type ProgramNextBatch = {
+  id: number;
+  startDate: string;
+  capacity: number;
+};
+
 export type Program = {
   id: string;
   title: string;
@@ -60,6 +75,8 @@ export type Program = {
   }>;
   learningOutcomes: string[];
   careerRoles: string[];
+  batches?: ProgramBatch[];
+  nextBatch?: ProgramNextBatch | null;
   criteriaSummary: {
     totalCredits: string;
     minimumScore: string;

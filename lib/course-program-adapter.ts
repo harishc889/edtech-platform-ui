@@ -1,8 +1,10 @@
 import type {
   CourseLesson,
   CourseModule,
+  ProgramBatch,
   CourseResourceLink,
   Program,
+  ProgramNextBatch,
 } from "@/lib/program-catalog";
 
 function pickString(...vals: unknown[]): string | undefined {
@@ -139,6 +141,30 @@ function toStringArray(value: unknown, fallback: string[] = []): string[] {
     .filter(Boolean);
 }
 
+function mapBatch(raw: Record<string, unknown>): ProgramBatch {
+  return {
+    id: toNumber(raw.id ?? raw.batchId, 0),
+    courseId: toNumber(raw.courseId, 0),
+    startDate:
+      typeof raw.startDate === "string" ? raw.startDate : String(raw.startDate ?? ""),
+    endDate:
+      typeof raw.endDate === "string" ? raw.endDate : String(raw.endDate ?? ""),
+    mentorName: pickString(raw.mentorName),
+    capacity: toNumber(raw.capacity, 0),
+  };
+}
+
+function mapNextBatch(raw: unknown): ProgramNextBatch | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    id: toNumber(row.id ?? row.batchId, 0),
+    startDate:
+      typeof row.startDate === "string" ? row.startDate : String(row.startDate ?? ""),
+    capacity: toNumber(row.capacity, 0),
+  };
+}
+
 function deriveHours(raw: Record<string, unknown>): string {
   const directHours = toNumber(
     raw.hours ??
@@ -212,6 +238,10 @@ export function mapCourseToProgram(
     typeof raw.description === "string" && raw.description.trim()
       ? raw.description.trim()
       : undefined;
+  const batches = Array.isArray(raw.batches)
+    ? (raw.batches as Array<Record<string, unknown>>).map((batch) => mapBatch(batch))
+    : undefined;
+  const nextBatch = mapNextBatch(raw.nextBatch);
 
   return {
     id,
@@ -287,6 +317,8 @@ export function mapCourseToProgram(
       : [],
     learningOutcomes: toStringArray(raw.learningOutcomes, []),
     careerRoles: toStringArray(raw.careerRoles, []),
+    batches,
+    nextBatch,
     criteriaSummary: {
       totalCredits:
         typeof raw.totalCredits === "string"

@@ -9,7 +9,6 @@ import {
   enrollmentsFromMePayload,
 } from "@/lib/api-normalize";
 import { useAuth } from "@/lib/auth-context";
-import { getBatchesForCourse } from "@/lib/batch-service";
 import { getCachedProgramsResult } from "@/lib/client-course-cache";
 import {
   getLearnCourseSlugForEnrollment,
@@ -39,15 +38,6 @@ type NextBatchPreview = {
   capacity: number;
 };
 
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function formatBatchDate(value: string) {
   if (!value) return "TBA";
   const dt = new Date(value);
@@ -59,29 +49,6 @@ function formatBatchDate(value: string) {
   }).format(dt);
 }
 
-function pickNearestBatch(rows: Record<string, unknown>[]): NextBatchPreview | null {
-  if (rows.length === 0) return null;
-  const now = Date.now();
-  const parsed = rows
-    .map((row, idx) => {
-      const id = toNumber(row.id ?? row.batchId, idx + 1);
-      const startDateRaw =
-        typeof row.startDate === "string" ? row.startDate : String(row.startDate ?? "");
-      const timestamp = startDateRaw ? new Date(startDateRaw).getTime() : Number.NaN;
-      const capacity = toNumber(row.capacity, 0);
-      return { id, startDate: startDateRaw, timestamp, capacity };
-    })
-    .filter((item) => Number.isFinite(item.id));
-  if (parsed.length === 0) return null;
-  const upcoming = parsed
-    .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= now)
-    .sort((a, b) => a.timestamp - b.timestamp);
-  const fallback = parsed
-    .filter((item) => Number.isFinite(item.timestamp))
-    .sort((a, b) => a.timestamp - b.timestamp);
-  const best = upcoming[0] ?? fallback[0] ?? parsed[0];
-  return { id: best.id, startDate: best.startDate, capacity: best.capacity };
-}
 
 function ProgressBar({ value }: { value: number }) {
   return (
@@ -109,9 +76,6 @@ export default function DashboardPage() {
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(true);
   const [browseCourses, setBrowseCourses] = useState<Program[]>([]);
   const [browseLoading, setBrowseLoading] = useState(true);
-  const [nextBatchByCourseId, setNextBatchByCourseId] = useState<
-    Record<string, NextBatchPreview>
-  >({});
   const [optimisticEnrollmentHints, setOptimisticEnrollmentHints] = useState<
     EnrollmentChangedDetail[]
   >([]);
@@ -267,32 +231,6 @@ export default function DashboardPage() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (browseCourses.length === 0) return;
-    let active = true;
-    void Promise.all(
-      browseCourses.map(async (course) => {
-        if (!course.apiCourseId) return { courseId: course.id, nextBatch: null };
-        const res = await getBatchesForCourse(course.apiCourseId);
-        if (!res.ok) return { courseId: course.id, nextBatch: null };
-        return {
-          courseId: course.id,
-          nextBatch: pickNearestBatch(asRecordList(res.data)),
-        };
-      }),
-    ).then((results) => {
-      if (!active) return;
-      const mapped: Record<string, NextBatchPreview> = {};
-      results.forEach((entry) => {
-        if (entry.nextBatch) mapped[entry.courseId] = entry.nextBatch;
-      });
-      setNextBatchByCourseId(mapped);
-    });
-    return () => {
-      active = false;
-    };
-  }, [browseCourses]);
 
   if (authStatus === "loading" || (authStatus === "authenticated" && enrollmentsLoading)) {
     return (
@@ -511,7 +449,7 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 {browseCourses.map((course) => {
-                  const nextBatch = nextBatchByCourseId[course.id];
+                  const nextBatch = (course.nextBatch ?? null) as NextBatchPreview | null;
                   const isEnrolled =
                     enrolledCourseKeys.has(course.id) ||
                     enrolledCourseKeys.has(normalizeKey(course.id)) ||
