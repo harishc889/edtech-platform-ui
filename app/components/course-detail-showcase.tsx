@@ -32,6 +32,8 @@ export default function CourseDetailShowcase({
   onSelectBatch,
 }: Props) {
   const [expandedModule, setExpandedModule] = useState<number>(0);
+  const whatsappBusinessLink =
+    process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_LINK?.trim() || "/contact";
   const toolItems = useMemo(() => {
     if (course.tools && course.tools.length > 0) return course.tools;
     return Array.from({ length: 14 }).map((_, idx) => ({
@@ -558,7 +560,7 @@ export default function CourseDetailShowcase({
           </p>
           <div className="mx-auto mt-6 max-w-4xl overflow-hidden rounded-[1.75rem] shadow-[0_12px_40px_-8px_rgba(15,23,42,0.35)] md:mt-8">
             <div className="grid md:grid-cols-2">
-              <div className="flex flex-col justify-between bg-[#0c1e3d] px-5 py-6 text-white sm:px-7 sm:py-8">
+              <div className="flex flex-col bg-[#0c1e3d] px-5 py-6 text-white sm:px-7 sm:py-8">
                 <div>
                   <div className="rounded-t-xl border border-sky-400/35 bg-[#081428]/60 px-4 py-3 text-center sm:px-5 sm:py-4">
                     <p className="text-xs text-sky-100/95 sm:text-sm">Book your seat with</p>
@@ -573,7 +575,7 @@ export default function CourseDetailShowcase({
                     </p>
                   </div>
                 </div>
-                <div className="mt-6 flex flex-col items-center gap-3">
+                <div className="mt-5 flex flex-col items-center gap-3">
                   <Link
                     href={enrollHref}
                     className="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-sky-500 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-sky-400"
@@ -592,9 +594,57 @@ export default function CourseDetailShowcase({
                   Information on various payment methods is available for your convenience
                   and seamless registration.
                 </p>
-                <span className="mt-3 inline-flex self-start rounded-full bg-sky-300 px-3 py-1 text-[10px] font-semibold text-[#0c1e3d] sm:text-xs">
-                  No Cost EMI Available
-                </span>
+                <div className="mt-3 rounded-lg border border-cyan-200/45 bg-cyan-50 px-3 py-2 text-left text-[11px] leading-snug text-slate-900 sm:text-xs">
+                  <p className="font-bold">EMI payment assistance is available via support team only.</p>
+                  <p className="mt-1">
+                    For EMI plan activation, call{" "}
+                    <a
+                      href="tel:+917017578290"
+                      className="font-bold text-sky-800 underline underline-offset-2"
+                    >
+                      +91-7017578290
+                    </a>
+                    .
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Link
+                      href={whatsappBusinessLink}
+                      className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-sky-800 transition hover:bg-sky-50 sm:text-xs"
+                      target={whatsappBusinessLink.startsWith("http") ? "_blank" : undefined}
+                      rel={
+                        whatsappBusinessLink.startsWith("http")
+                          ? "noopener noreferrer"
+                          : undefined
+                      }
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-4 w-4 fill-current text-[#25D366]"
+                        aria-hidden
+                      >
+                        <path d="M20.5 3.5A11 11 0 0 0 3.8 17.2L2.5 22l5-1.3a11 11 0 0 0 5 1.2h.1A11 11 0 0 0 20.5 3.5Zm-8 16.6a9.2 9.2 0 0 1-4.7-1.3l-.3-.2-2.9.7.8-2.8-.2-.3a9.1 9.1 0 1 1 7.3 3.9Zm5-6.8c-.3-.2-1.7-.8-2-.9s-.4-.2-.6.2-.7.9-.8 1c-.2.2-.3.2-.6.1-1.7-.8-2.9-2.5-3.1-2.8s0-.4.1-.6l.5-.5c.1-.1.2-.2.3-.4.1-.2 0-.4 0-.5s-.6-1.5-.9-2-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-.9 2.3c0 1.4 1 2.7 1.1 2.9.1.2 2 3.2 4.9 4.4 2.9 1.2 2.9.8 3.4.8.5 0 1.7-.7 1.9-1.4.2-.7.2-1.2.1-1.3-.1-.2-.3-.2-.6-.3Z" />
+                      </svg>
+                      WhatsApp support
+                    </Link>
+                    <Link
+                      href="/contact"
+                      className="inline-flex items-center rounded-full border border-sky-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-sky-800 transition hover:bg-sky-50 sm:text-xs"
+                    >
+                      <span className="mr-1.5 relative h-3.5 w-3.5 overflow-hidden rounded-full">
+                        <Image
+                          src="/images/ai-assistant-avatar.png"
+                          alt=""
+                          fill
+                          quality={60}
+                          loading="lazy"
+                          sizes="14px"
+                          className="object-cover"
+                        />
+                      </span>
+                      Send enquiry form
+                    </Link>
+                  </div>
+                </div>
                 <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/25 bg-white/15">
                   {emiInstallments.map((row) => (
                     <div
@@ -609,6 +659,10 @@ export default function CourseDetailShowcase({
                     </div>
                   ))}
                 </div>
+                <p className="mt-2 text-left text-[10px] leading-relaxed text-sky-100/90 sm:text-xs">
+                  EMI values shown above are indicative estimates for guidance. Final monthly EMI
+                  depends on lender approval, tenure, interest rate, and applicable charges.
+                </p>
                 <div className="mt-4 rounded-xl border border-white/30 bg-white p-2 sm:p-3">
                   <div className="grid grid-cols-3 gap-px bg-slate-200/80">
                     {[
