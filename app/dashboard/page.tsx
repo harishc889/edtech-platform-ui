@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isAdminFromMePayload } from "@/lib/auth-role";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import CourseCard from "@/app/components/course-card";
@@ -66,6 +67,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user: currentUser, mePayload, status: authStatus, refresh: refreshAuth } =
     useAuth();
+  const isAdminUser = isAdminFromMePayload(mePayload);
   const [activeTab, setActiveTab] = useState<"courses" | "certifications" | "browse">("courses");
   const [enrolledCourses, setEnrolledCourses] = useState<
     ReturnType<typeof mapEnrollmentRow>[]
@@ -272,6 +274,39 @@ export default function DashboardPage() {
               </p>
             ) : null}
           </div>
+          {isAdminUser ? (
+            <div className="relative overflow-hidden rounded-3xl border border-slate-900/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 p-6 text-white shadow-2xl shadow-slate-900/25 sm:p-8">
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-500/20 blur-3xl" />
+              <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300/95">
+                    Administrator access
+                  </p>
+                  <h2 className="font-display mt-2 text-xl font-bold tracking-tight sm:text-2xl">
+                    Admin console
+                  </h2>
+                  <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-400">
+                    Dashboard, users, payments, analytics, and live sessions — operator tools
+                    separate from the learner experience.
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-7 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-500/30 transition hover:brightness-110"
+                  >
+                    Open admin console
+                  </Link>
+                  <Link
+                    href="/admin/live-sessions/new"
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3 text-sm font-semibold text-white transition hover:border-cyan-400/50 hover:bg-white/5"
+                  >
+                    New meeting
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </header>
 
         <section className="mt-12">

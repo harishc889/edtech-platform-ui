@@ -10,7 +10,7 @@ import {
 
 export default function FloatingEnquiryCta() {
   const pathname = usePathname();
-  const hideOn = ["/contact", "/login", "/register"];
+  const hideOn = ["/contact", "/login", "/register", "/admin"];
   const whatsappHref = resolveWhatsAppBusinessHref();
   const whatsappExternal = isExternalWhatsAppHref(whatsappHref);
   if (hideOn.some((p) => pathname.startsWith(p))) {

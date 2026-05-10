@@ -85,7 +85,7 @@ export default function RootLayout({
           <AuthProvider>
             <SiteHeader />
             <FloatingEnquiryCta />
-            <div className="flex-1">{children}</div>
+            <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
             <SiteFooter />
           </AuthProvider>
         </ToastProvider>

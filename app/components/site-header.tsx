@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/app/components/toast-provider";
 import { useAuth } from "@/lib/auth-context";
+import { isAdminFromMePayload } from "@/lib/auth-role";
 import { logout } from "@/lib/auth-service";
 import { getCachedPrograms } from "@/lib/client-course-cache";
 import type { Program } from "@/lib/program-catalog";
@@ -18,7 +19,9 @@ const navLinks = [
 
 export default function SiteHeader() {
   const router = useRouter();
-  const { user: currentUser, status: authStatus, clear: clearAuth } = useAuth();
+  const { user: currentUser, mePayload, status: authStatus, clear: clearAuth } =
+    useAuth();
+  const isAdminUser = isAdminFromMePayload(mePayload);
   const checkingAuth = authStatus === "loading";
   const isAuthenticated = authStatus === "authenticated" && currentUser !== null;
   const [open, setOpen] = useState(false);
@@ -270,6 +273,15 @@ export default function SiteHeader() {
                   >
                     Profile
                   </Link>
+                  {isAdminUser ? (
+                    <Link
+                      href="/admin"
+                      className="mt-1 block rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Admin console
+                    </Link>
+                  ) : null}
                   <button
                     type="button"
                     className="mt-1 block w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-60"
@@ -407,6 +419,15 @@ export default function SiteHeader() {
                 >
                   Profile
                 </Link>
+                {isAdminUser ? (
+                  <Link
+                    href="/admin"
+                    className="rounded-xl px-3 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-900 hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    Admin console
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   className="rounded-xl px-3 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
