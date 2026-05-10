@@ -3,12 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  isExternalWhatsAppHref,
+  resolveWhatsAppBusinessHref,
+} from "@/lib/whatsapp-business-link";
 
 export default function FloatingEnquiryCta() {
   const pathname = usePathname();
   const hideOn = ["/contact", "/login", "/register"];
-  const whatsappBusinessLink =
-    process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_LINK?.trim() || "/contact";
+  const whatsappHref = resolveWhatsAppBusinessHref();
+  const whatsappExternal = isExternalWhatsAppHref(whatsappHref);
   if (hideOn.some((p) => pathname.startsWith(p))) {
     return null;
   }
@@ -45,15 +49,11 @@ export default function FloatingEnquiryCta() {
       </Link>
 
       <Link
-        href={whatsappBusinessLink}
+        href={whatsappHref}
         aria-label="WhatsApp"
         className="group relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-[#25D366] shadow-lg shadow-slate-300/60 transition hover:scale-105"
-        target={whatsappBusinessLink.startsWith("http") ? "_blank" : undefined}
-        rel={
-          whatsappBusinessLink.startsWith("http")
-            ? "noopener noreferrer"
-            : undefined
-        }
+        target={whatsappExternal ? "_blank" : undefined}
+        rel={whatsappExternal ? "noopener noreferrer" : undefined}
       >
         <span className="pointer-events-none absolute right-full mr-2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white opacity-0 shadow-md transition group-hover:opacity-100">
           WhatsApp

@@ -15,7 +15,7 @@ export default function FeePaymentPage() {
     >
       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 text-sm text-slate-700">
         <p>
-          <span className="font-semibold">Phone:</span> +91-7017578290
+          <span className="font-semibold">Phone:</span> +91-7895001831
         </p>
         <p className="mt-2">
           <span className="font-semibold">Email:</span> la@labimsolutions.com
