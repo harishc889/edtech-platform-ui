@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 type CourseCardProps = {
   title: string;
@@ -28,7 +29,7 @@ export default function CourseCard({
   isEnrolled = false,
   imagePriority = false,
 }: CourseCardProps) {
-  const coverSrc = cardCoverImage?.trim() ?? "";
+  const coverSrc = trimOrEmpty(cardCoverImage);
   const hasCoverImage = coverSrc.length > 0;
 
   return (

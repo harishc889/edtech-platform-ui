@@ -1,5 +1,7 @@
+import type { JsonLdData } from "@/lib/seo/schemas";
+
 type JsonLdProps = {
-  data: Record<string, unknown>;
+  data: JsonLdData;
 };
 
 export default function JsonLd({ data }: JsonLdProps) {

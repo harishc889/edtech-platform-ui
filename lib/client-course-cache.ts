@@ -1,7 +1,12 @@
 "use client";
 
-import { asRecordList } from "@/lib/api-normalize";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import { unwrapArray } from "@/lib/api-normalize";
+import { mapCourseByCodeDtoToProgram } from "@/lib/course-program-adapter";
+import { trimOrEmpty } from "@/lib/string-trim";
+import type {
+  CourseBatchDto,
+  PublishedCourseDto,
+} from "@/lib/course-api-types";
 import { getPublishedCourses } from "@/lib/course-service";
 import type { Program } from "@/lib/program-catalog";
 
@@ -45,9 +50,19 @@ export async function getCachedProgramsResult(): Promise<CachedProgramsResult> {
       if (!response.ok) {
         return { ok: false, programs: [], message: response.message };
       }
-      const programs = asRecordList(response.data).map((row) =>
-        mapCourseToProgram(row),
-      );
+      const rows = unwrapArray<PublishedCourseDto>(response.data);
+      const programs = rows.map((row) => {
+        const optionalBatches = (
+          row as PublishedCourseDto & { batches?: CourseBatchDto[] }
+        ).batches;
+        return mapCourseByCodeDtoToProgram(
+          {
+            ...row,
+            batches: Array.isArray(optionalBatches) ? optionalBatches : [],
+          },
+          trimOrEmpty(row.courseCode) || String(row.id),
+        );
+      });
       cache = { programs, expiresAt: Date.now() + CACHE_TTL_MS };
       return { ok: true, programs, message: null };
     } catch (error) {

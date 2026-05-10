@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import BackNavLink from "../components/back-nav-link";
+import ContactForm from "../components/contact-form";
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -27,68 +28,7 @@ export default function ContactPage() {
               Fill out the form and we will get back to you as soon as possible.
             </p>
 
-            <form className="mt-8 space-y-5">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Name</span>
-                  <input
-                    type="text"
-                    placeholder="Enter your name"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-cyan-500/30 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Email</span>
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-cyan-500/30 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">
-                    Phone Number
-                  </span>
-                  <input
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-cyan-500/30 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Subject</span>
-                  <input
-                    type="text"
-                    placeholder="What is this regarding?"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-cyan-500/30 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="text-sm font-semibold text-slate-700">Message</span>
-                <textarea
-                  rows={6}
-                  placeholder="Describe your course, payment related queries..."
-                  className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-cyan-500/30 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
-                />
-              </label>
-
-              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                <button
-                  type="button"
-                  className="inline-flex min-w-40 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500"
-                >
-                  Send Message
-                </button>
-                <p className="text-xs text-slate-500">
-                  By submitting, you agree to be contacted about your enquiry.
-                </p>
-              </div>
-            </form>
+            <ContactForm />
           </section>
 
           <aside className="space-y-6">
@@ -104,7 +44,7 @@ export default function ContactPage() {
                 <div>
                   <p className="text-slate-400">Email</p>
                   <a
-                    href="mailto:la@labimsolutions.com"
+                    href="mailto:la@labimacademy.com"
                     className="mt-1 inline-block font-semibold text-white transition hover:text-cyan-300"
                   >
                     la@labimacademy.com

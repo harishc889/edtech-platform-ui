@@ -1,13 +1,15 @@
 import axios, { type AxiosError } from "axios";
 import api from "@/lib/api";
 import { getErrorMessageFromPayload } from "@/lib/api-error";
+import {
+  normalizeAuthMePayload,
+  type AuthMePayload,
+  type AuthUser,
+} from "@/lib/auth-me-types";
 import { bffUrl, backendRequest } from "@/lib/backend-api-client";
+import { trimOrEmpty } from "@/lib/string-trim";
 
-export interface AuthUser {
-  id?: string | number;
-  name?: string;
-  email?: string;
-}
+export type { AuthUser };
 
 export interface AuthSuccessData {
   token?: string;
@@ -17,6 +19,7 @@ export interface AuthSuccessData {
 
 export interface AuthErrorData {
   message: string;
+  /** Untyped axios/network payload — normalize at call sites if needed. */
   details?: unknown;
 }
 
@@ -41,7 +44,7 @@ function resolveBffUrl(segments: string[], baseUrl?: string): string {
 async function jsonRequest<T>(
   method: string,
   segments: string[],
-  jsonBody: Record<string, unknown> | undefined,
+  jsonBody: unknown,
   options: AuthRequestOptions = {},
 ): Promise<AuthServiceResponse<T>> {
   const url = resolveBffUrl(segments, options.baseUrl);
@@ -60,7 +63,7 @@ async function jsonRequest<T>(
     };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<Record<string, unknown>>;
+      const axiosError = error as AxiosError<unknown>;
       const status = axiosError.response?.status ?? 0;
       const payload = axiosError.response?.data ?? null;
       return {
@@ -81,7 +84,8 @@ async function jsonRequest<T>(
       status: 0,
       error: {
         message: "Network error. Please check your connection and try again.",
-        details: error,
+        details:
+          error instanceof Error ? error.message : undefined,
       },
     };
   }
@@ -96,7 +100,7 @@ export async function login(
   return jsonRequest<AuthSuccessData>(
     "POST",
     ["Auth", "login"],
-    { email: email.trim(), password },
+    { email: trimOrEmpty(email), password },
     options,
   );
 }
@@ -112,8 +116,8 @@ export async function register(
     "POST",
     ["Auth", "register"],
     {
-      name: name.trim(),
-      email: email.trim(),
+      name: trimOrEmpty(name),
+      email: trimOrEmpty(email),
       password,
     },
     options,
@@ -128,7 +132,7 @@ export async function forgotPassword(
   return jsonRequest<{ message?: string }>(
     "POST",
     ["Auth", "forgot-password"],
-    { email: email.trim() },
+    { email: trimOrEmpty(email) },
     options,
   );
 }
@@ -142,7 +146,7 @@ export async function resetPassword(
   return jsonRequest<{ message?: string }>(
     "POST",
     ["Auth", "reset-password"],
-    { token: token.trim(), newPassword },
+    { token: trimOrEmpty(token), newPassword },
     options,
   );
 }
@@ -160,13 +164,26 @@ export async function logout(
 }
 
 /**
- * GET /api/Auth/me — session cookie.
- * For the dashboard, include this user’s enrollments on the same payload (e.g. `enrollments`, `courses`, or nested `user.enrollments`) so the UI does not need a second request.
+ * GET /api/Auth/me — session cookie. Response is normalized to {@link AuthMePayload}.
  */
 export async function fetchCurrentUser(
   options: AuthRequestOptions = {},
-): Promise<AuthServiceResponse<AuthUser>> {
-  return jsonRequest<AuthUser>("GET", ["Auth", "me"], undefined, options);
+): Promise<AuthServiceResponse<AuthMePayload>> {
+  const res = await jsonRequest<unknown>(
+    "GET",
+    ["Auth", "me"],
+    undefined,
+    options,
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, error: res.error };
+  }
+  const me = normalizeAuthMePayload(res.data);
+  return {
+    ok: true,
+    status: res.status,
+    data: me ?? undefined,
+  };
 }
 
 export { backendRequest, bffUrl };

@@ -5,19 +5,16 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { profileFromMePayload } from "@/lib/api-normalize";
+import {
+  authProfileFromMePayload,
+  type AuthMePayload,
+} from "@/lib/auth-me-types";
 import { fetchCurrentUser, type AuthUser } from "@/lib/auth-service";
-
-// `useLayoutEffect` warns during SSR. Fall back to `useEffect` on the server,
-// where it's a no-op anyway.
-const useIsomorphicLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
  * Single source of truth for client-side auth state.
@@ -41,9 +38,8 @@ const useIsomorphicLayoutEffect =
  * Hydration note:
  * - Initial state is intentionally `{ user: null, status: "loading" }` on
  *   both server and client so the SSR HTML matches the first client render.
- * - sessionStorage hydration happens in a `useLayoutEffect` immediately after
- *   mount so the cached user appears in the same paint as hydration — no
- *   logged-out flicker, no hydration mismatch warning.
+ * - sessionStorage is applied in `useEffect` after hydration only — avoids
+ *   branching hooks (`useEffect` vs `useLayoutEffect`) between server and client.
  *
  * Components should call `useAuth()` instead of `fetchCurrentUser()` directly.
  */
@@ -52,14 +48,14 @@ export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 type AuthContextValue = {
   user: AuthUser | null;
-  /** Raw `/api/Auth/me` payload — needed by dashboard for enrollments / certs. */
-  mePayload: unknown;
+  /** Normalized `/api/Auth/me` payload (`user`, `claims`, optional certs / legacy role fields). */
+  mePayload: AuthMePayload | null;
   status: AuthStatus;
   isAuthenticated: boolean;
   /** Force a fresh `/me` call. Returns the user (or null if unauthenticated). */
   refresh: () => Promise<AuthUser | null>;
   /** Set user without hitting the network (e.g. right after login). */
-  setUser: (user: AuthUser | null, mePayload?: unknown) => void;
+  setUser: (user: AuthUser | null, mePayload?: AuthMePayload | null) => void;
   /** Clear all auth state (e.g. on logout / 401). */
   clear: () => void;
 };
@@ -100,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // effect below — that runs synchronously after the first commit on the
   // client and before paint, so the user does NOT see a logged-out flicker.
   const [user, setUserState] = useState<AuthUser | null>(null);
-  const [mePayload, setMePayload] = useState<unknown>(null);
+  const [mePayload, setMePayload] = useState<AuthMePayload | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
 
   /** Coalesces concurrent refresh() callers into a single in-flight request. */
@@ -118,13 +114,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       const payload = response.data ?? null;
-      const profile = profileFromMePayload(payload) as AuthUser | null;
-      const resolved = profile ?? (payload as AuthUser | null);
-      setUserState(resolved);
+      const profile = authProfileFromMePayload(payload);
+      setUserState(profile);
       setMePayload(payload);
-      setStatus(resolved ? "authenticated" : "unauthenticated");
-      writeCachedUser(resolved);
-      return resolved;
+      setStatus(profile ? "authenticated" : "unauthenticated");
+      writeCachedUser(profile);
+      return profile;
     })();
     inFlightRef.current = task;
     try {
@@ -135,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setUser = useCallback(
-    (next: AuthUser | null, nextMePayload?: unknown) => {
+    (next: AuthUser | null, nextMePayload?: AuthMePayload | null) => {
       setUserState(next);
       if (typeof nextMePayload !== "undefined") {
         setMePayload(nextMePayload);
@@ -155,10 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     writeCachedUser(null);
   }, []);
 
-  // Hydrate from sessionStorage immediately after mount, before paint, so a
-  // returning user sees the header in its authenticated state on the very
-  // first frame instead of a "Login" flash. Runs only on the client.
-  useIsomorphicLayoutEffect(() => {
+  // Hydrate from sessionStorage after mount (client-only). Keeps SSR + first
+  // client render identical; sensitive surfaces can defer UI until mounted.
+  useEffect(() => {
     const cached = readCachedUser();
     if (cached) {
       setUserState(cached);

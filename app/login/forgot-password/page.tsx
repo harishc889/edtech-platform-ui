@@ -8,9 +8,10 @@ import {
   authLabelClass,
   authPrimaryButtonClass,
 } from "@/app/components/password-field-with-toggle";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimOrEmpty(email));
 }
 
 export default function ForgotPasswordPage() {
@@ -21,7 +22,7 @@ export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function validate(nextEmail: string) {
-    if (!nextEmail) {
+    if (!trimOrEmpty(nextEmail)) {
       setEmailError("Email is required.");
       return false;
     }
@@ -41,7 +42,7 @@ export default function ForgotPasswordPage() {
 
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
-    const nextEmail = (formData.get("email")?.toString() ?? email).trim();
+    const nextEmail = trimOrEmpty(formData.get("email")?.toString() ?? email);
     setEmail(nextEmail);
 
     if (!validate(nextEmail)) return;

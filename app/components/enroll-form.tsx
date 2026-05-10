@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { asRecordList } from "@/lib/api-normalize";
+import type { BatchByCourseDto } from "@/lib/batch-types";
+import type { CourseByCodeDto } from "@/lib/course-api-types";
 import type { ICity, ICountry, IState } from "country-state-city";
 import {
   authSelectClass,
@@ -17,9 +18,14 @@ import { getBatchesForCourse } from "@/lib/batch-service";
 import { getCachedProgramsResult } from "@/lib/client-course-cache";
 import { getCourseById } from "@/lib/course-service";
 import {
+  formatBatchDateCompact,
+  formatInrWhole,
+} from "@/lib/display-format";
+import {
   RAZORPAY_CHECKOUT_SCRIPT,
   runRazorpayPaymentFlow,
 } from "@/lib/razorpay-checkout-flow";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 type CountryStateCityModule = typeof import("country-state-city");
 
@@ -35,12 +41,6 @@ const ENROLLMENT_TERMS = [
   "Missed sessions are learner responsibility; backup sessions are not guaranteed for every absence.",
   "All rules are designed to maintain quality, fairness, and a professional learning environment.",
 ];
-
-function formatInr(amount: number) {
-  return `₹${new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0,
-  }).format(amount)}`;
-}
 
 const selectClass = authSelectClass;
 
@@ -69,50 +69,19 @@ type BatchOption = {
   capacity: number;
 };
 
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
-function mapCourseOption(raw: Record<string, unknown>, index: number): CourseOption {
-  const apiCourseId = toNumber(raw.id ?? raw.courseId, index + 1);
-  const title =
-    typeof raw.title === "string" && raw.title.trim()
-      ? raw.title.trim()
-      : typeof raw.name === "string" && raw.name.trim()
-        ? raw.name.trim()
-        : `Course ${apiCourseId}`;
-  const courseCodeSource =
-    typeof raw.courseCode === "string" && raw.courseCode.trim()
-      ? raw.courseCode.trim()
-      : typeof raw.code === "string" && raw.code.trim()
-        ? raw.code.trim()
-        : typeof raw.slug === "string" && raw.slug.trim()
-          ? raw.slug.trim()
-          : String(raw.id ?? title);
-  const courseCode = courseCodeSource.replace(/\s+/g, "-");
-  const id = courseCode;
-
-  const upfrontInr = toNumber(
-    raw.upfrontInr ?? raw.upfrontAmount ?? raw.price ?? raw.amount,
-    0,
-  );
-  const seatBookingInr = toNumber(
-    raw.seatBookingInr ?? raw.bookingAmount ?? raw.registrationAmount,
-    Math.min(upfrontInr || 5000, 5000),
-  );
-  const defaultBatchId = toNumber(raw.defaultBatchId ?? raw.batchId, 1);
-
+function courseOptionFromByCodeDto(
+  dto: CourseByCodeDto,
+  catalogProgramId: string,
+  catalogCourseCode: string,
+): CourseOption {
+  const apiCourseId = dto.id;
+  const defaultBatchId = dto.batches[0]?.id ?? 1;
   return {
-    id,
-    courseCode,
-    title,
-    upfrontInr,
-    seatBookingInr,
+    id: catalogProgramId,
+    courseCode: catalogCourseCode,
+    title: trimOrEmpty(dto.title) || `Course ${apiCourseId}`,
+    upfrontInr: dto.upfrontInr,
+    seatBookingInr: dto.seatBookingInr,
     apiCourseId,
     defaultBatchId,
   };
@@ -130,18 +99,13 @@ function programToCourseOption(program: Program): CourseOption {
   };
 }
 
-function mapBatchOption(raw: Record<string, unknown>, index: number): BatchOption {
-  const id = toNumber(raw.id ?? raw.batchId, index + 1);
-  const mentorName =
-    typeof raw.mentorName === "string" && raw.mentorName.trim()
-      ? raw.mentorName.trim()
-      : "Faculty will be assigned";
+function batchOptionFromDto(dto: BatchByCourseDto): BatchOption {
   return {
-    id,
-    mentorName,
-    startDate: typeof raw.startDate === "string" ? raw.startDate : "",
-    endDate: typeof raw.endDate === "string" ? raw.endDate : "",
-    capacity: toNumber(raw.capacity, 0),
+    id: dto.id,
+    mentorName: trimOrEmpty(dto.mentorName) || "Faculty will be assigned",
+    startDate: dto.startDate,
+    endDate: dto.endDate,
+    capacity: dto.capacity,
   };
 }
 
@@ -234,7 +198,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
         {
           id: "upfront",
           label: "Upfront Payment",
-          amountDisplay: formatInr(effectiveProgram.upfrontInr),
+          amountDisplay: formatInrWhole(effectiveProgram.upfrontInr),
           amountInr: effectiveProgram.upfrontInr,
         },
       ];
@@ -245,7 +209,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
         {
           id: "book-slot",
           label: "Book Slot",
-          amountDisplay: formatInr(effectiveProgram.seatBookingInr),
+          amountDisplay: formatInrWhole(effectiveProgram.seatBookingInr),
           amountInr: effectiveProgram.seatBookingInr,
         },
       ];
@@ -256,7 +220,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
       return {
         id: `emi-${months}`,
         label: `EMI - ${months} Months`,
-        amountDisplay: `${formatInr(monthly)} / month`,
+        amountDisplay: `${formatInrWhole(monthly)} / month`,
         amountInr: monthly * months,
       };
     });
@@ -305,18 +269,10 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
     let active = true;
     setSelectedCourseDetail(null);
     void getCourseById(program.courseCode).then((res) => {
-      if (!active || !res.ok) return;
-      const detailRaw =
-        (res.data && typeof res.data === "object"
-          ? (res.data as Record<string, unknown>)
-          : null) ?? asRecordList(res.data)[0];
-      if (!detailRaw) return;
-      const mapped = mapCourseOption(detailRaw, 0);
-      setSelectedCourseDetail({
-        ...mapped,
-        id: program.id,
-        courseCode: program.courseCode,
-      });
+      if (!active || !res.ok || !res.data) return;
+      setSelectedCourseDetail(
+        courseOptionFromByCodeDto(res.data, program.id, program.courseCode),
+      );
     });
     return () => {
       active = false;
@@ -340,9 +296,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
         setBatchLoading(false);
         return;
       }
-      const mapped = asRecordList(res.data)
-        .map(mapBatchOption)
-        .filter((batch) => Number.isFinite(batch.id));
+      const mapped = res.data.map(batchOptionFromDto);
       setBatchOptions(mapped);
       setBatchLoading(false);
     });
@@ -386,40 +340,29 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
   const selectedBatch = batchOptions.find((b) => String(b.id) === batchId) ?? null;
   const selectedBatchId = selectedBatch?.id ?? effectiveProgram?.defaultBatchId ?? null;
 
-  function formatBatchDate(value: string) {
-    if (!value) return "TBA";
-    const dt = new Date(value);
-    if (Number.isNaN(dt.getTime())) return "TBA";
-    return new Intl.DateTimeFormat("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(dt);
-  }
-
   function validateForm() {
     const nextErrors: Record<string, string> = {};
 
-    if (!firstName.trim()) nextErrors.firstName = "First name is required.";
-    if (!mobile.trim()) {
+    if (!trimOrEmpty(firstName)) nextErrors.firstName = "First name is required.";
+    if (!trimOrEmpty(mobile)) {
       nextErrors.mobile = "Mobile number is required.";
-    } else if (!/^\d{10}$/.test(mobile.trim())) {
+    } else if (!/^\d{10}$/.test(trimOrEmpty(mobile))) {
       nextErrors.mobile = "Mobile number must be exactly 10 digits.";
     }
-    if (!email.trim()) {
+    if (!trimOrEmpty(email)) {
       nextErrors.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimOrEmpty(email))) {
       nextErrors.email = "please enter valid email";
     }
     // Designation field is optional / hidden in the current layout — do not block submit.
-    if (!courseId.trim()) nextErrors.course = "Course is required.";
-    if (batchOptions.length > 0 && !batchId.trim()) {
+    if (!trimOrEmpty(courseId)) nextErrors.course = "Course is required.";
+    if (batchOptions.length > 0 && !trimOrEmpty(batchId)) {
       nextErrors.batch = "Please select a batch.";
     }
-    if (!country.trim()) nextErrors.country = "Country is required.";
+    if (!trimOrEmpty(country)) nextErrors.country = "Country is required.";
     if (isIndia) {
-      if (!stateValue.trim()) nextErrors.state = "State is required.";
-      if (!city.trim()) nextErrors.city = "City is required.";
+      if (!trimOrEmpty(stateValue)) nextErrors.state = "State is required.";
+      if (!trimOrEmpty(city)) nextErrors.city = "City is required.";
     }
 
     setErrors(nextErrors);
@@ -720,8 +663,8 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
               </option>
               {batchOptions.map((batch) => (
                 <option key={batch.id} value={String(batch.id)}>
-                  Batch #{batch.id} - {formatBatchDate(batch.startDate)} to{" "}
-                  {formatBatchDate(batch.endDate)} - {batch.mentorName}
+                  Batch #{batch.id} - {formatBatchDateCompact(batch.startDate)} to{" "}
+                  {formatBatchDateCompact(batch.endDate)} - {batch.mentorName}
                 </option>
               ))}
             </SelectField>

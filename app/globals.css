@@ -31,6 +31,43 @@ body {
   font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Admin routes: align with site light theme if utility order ever conflicts */
+[data-admin-shell] {
+  background-color: var(--background);
+  color: var(--foreground);
+  /* Keeps native date/select widgets readable when OS is in dark mode */
+  color-scheme: light;
+}
+
+[data-admin-shell] :where(h1, h2) {
+  color: #0f172a;
+}
+
+/*
+ * Admin chrome must stay a single vertical sidebar column; nav sections render once inside it.
+ * HMR / layered Tailwind output occasionally lets `flex` beat `lg:hidden`, leaving the mobile
+ * “← Site / Admin” strip visible beside the branded stack — looks like duplicate sidebars. Plain CSS
+ * at the same breakpoint as `lg` removes that failure mode.
+ */
+[data-admin-shell] aside.admin-shell-sidebar {
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+}
+
+[data-admin-shell] .admin-shell-mobile-strip {
+  display: flex;
+}
+
+@media (min-width: 1024px) {
+  [data-admin-shell] .admin-shell-mobile-strip {
+    display: none !important;
+  }
+}
+
+[data-admin-shell] > div.admin-shell-row {
+  flex-wrap: nowrap;
+}
+
 /* Subtle mesh for hero backgrounds */
 .bg-mesh {
   background-color: #f0f9ff;

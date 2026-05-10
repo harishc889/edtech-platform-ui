@@ -3,18 +3,8 @@
 import { useEffect, useState } from "react";
 import CourseCard from "@/app/components/course-card";
 import { getCachedPrograms } from "@/lib/client-course-cache";
+import { formatBatchDateCompact } from "@/lib/display-format";
 import type { Program } from "@/lib/program-catalog";
-
-function formatBatchDate(value: string) {
-  if (!value) return "TBA";
-  const dt = new Date(value);
-  if (Number.isNaN(dt.getTime())) return "TBA";
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(dt);
-}
 
 export default function FeaturedPrograms() {
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -62,7 +52,7 @@ export default function FeaturedPrograms() {
                 eligibility={program.eligibility}
                 nextBatchLabel={
                   nextBatch
-                    ? `${formatBatchDate(nextBatch.startDate)} · ${nextBatch.capacity > 0 ? `${nextBatch.capacity} seats` : "Seats TBA"}`
+                    ? `${formatBatchDateCompact(nextBatch.startDate)} · ${nextBatch.capacity > 0 ? `${nextBatch.capacity} seats` : "Seats TBA"}`
                     : "Announcing soon"
                 }
                 cardCoverImage={program.cardCoverImage}

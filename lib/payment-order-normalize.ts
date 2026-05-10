@@ -1,7 +1,15 @@
 import type { PaymentCreateOrderResponse } from "@/lib/aspnet-api-types";
+import type { JsonValue } from "@/lib/json-types";
+import { trimOrUndefined } from "@/lib/string-trim";
 
-function str(v: unknown): string | undefined {
-  if (typeof v === "string" && v.trim()) return v.trim();
+/** Razorpay/order payload keys vary by casing — wire shape only. */
+type PaymentOrderWire = { readonly [key: string]: JsonValue };
+
+function str(v: JsonValue | undefined): string | undefined {
+  if (typeof v === "string") {
+    const t = trimOrUndefined(v);
+    if (t) return t;
+  }
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
   return undefined;
 }
@@ -11,14 +19,15 @@ function str(v: unknown): string | undefined {
  * Razorpay requires a non-empty `key` — if missing, checkout loads `.../build/undefined` (403).
  */
 export function normalizePaymentOrderForCheckout(
-  data: PaymentCreateOrderResponse | Record<string, unknown>,
+  data: unknown,
 ):
   | Pick<
       PaymentCreateOrderResponse,
       "orderId" | "amount" | "currency" | "keyId" | "courseTitle"
     >
   | null {
-  const r = data as Record<string, unknown>;
+  if (!data || typeof data !== "object") return null;
+  const r = data as PaymentOrderWire;
 
   const keyId =
     str(r.keyId) ??

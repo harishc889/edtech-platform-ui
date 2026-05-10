@@ -1,13 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { isAdminFromMePayload } from "@/lib/auth-role";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import CourseCard from "@/app/components/course-card";
-import {
-  asRecordList,
-  enrollmentsFromMePayload,
-} from "@/lib/api-normalize";
 import { useAuth } from "@/lib/auth-context";
 import { getCachedProgramsResult } from "@/lib/client-course-cache";
 import {
@@ -16,14 +13,23 @@ import {
 } from "@/lib/learn-course-route";
 import { getMyEnrolledCourses } from "@/lib/enroll-service";
 import {
-  mapEnrollmentRow,
+  enrollmentRowFromMyCourse,
   normalizeEnrollmentKey as normalizeKey,
+  type EnrollmentRow,
 } from "@/lib/enrollment-map";
 import {
   certificationsFromMePayload,
   mapCertificationRow,
 } from "@/lib/me-certifications";
+import { getMyLiveSessions } from "@/lib/live-session-service";
 import type { Program } from "@/lib/program-catalog";
+import {
+  formatBatchDateCompact,
+  formatSessionStartDisplay,
+} from "@/lib/display-format";
+import { pickNextUpcomingByStartTime } from "@/lib/live-session-schedule";
+import type { LiveSessionMyItem } from "@/lib/live-session-types";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 type EnrollmentChangedDetail = {
   courseId: string;
@@ -37,18 +43,6 @@ type NextBatchPreview = {
   startDate: string;
   capacity: number;
 };
-
-function formatBatchDate(value: string) {
-  if (!value) return "TBA";
-  const dt = new Date(value);
-  if (Number.isNaN(dt.getTime())) return "TBA";
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(dt);
-}
-
 
 function ProgressBar({ value }: { value: number }) {
   return (
@@ -66,16 +60,20 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user: currentUser, mePayload, status: authStatus, refresh: refreshAuth } =
     useAuth();
+  const isAdminUser = isAdminFromMePayload(mePayload);
   const [activeTab, setActiveTab] = useState<"courses" | "certifications" | "browse">("courses");
-  const [enrolledCourses, setEnrolledCourses] = useState<
-    ReturnType<typeof mapEnrollmentRow>[]
-  >([]);
+  const [enrolledCourses, setEnrolledCourses] = useState<EnrollmentRow[]>([]);
   const [certifications, setCertifications] = useState<
     ReturnType<typeof mapCertificationRow>[]
   >([]);
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(true);
   const [browseCourses, setBrowseCourses] = useState<Program[]>([]);
   const [browseLoading, setBrowseLoading] = useState(true);
+  const [nowIso, setNowIso] = useState("");
+  const [copiedSessionHint, setCopiedSessionHint] = useState<string | null>(null);
+  const [sessionsByCourse, setSessionsByCourse] = useState<
+    Record<number, LiveSessionMyItem[]>
+  >({});
   const [optimisticEnrollmentHints, setOptimisticEnrollmentHints] = useState<
     EnrollmentChangedDetail[]
   >([]);
@@ -108,6 +106,23 @@ export default function DashboardPage() {
   }, [optimisticEnrollmentHints]);
 
   useEffect(() => {
+    let active = true;
+    const seedTimer = window.setTimeout(() => {
+      if (!active) return;
+      setNowIso(new Date().toISOString());
+    }, 0);
+    const interval = window.setInterval(() => {
+      if (!active) return;
+      setNowIso(new Date().toISOString());
+    }, 60000);
+    return () => {
+      active = false;
+      window.clearTimeout(seedTimer);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     function requestEnrollmentRefresh() {
       const now = Date.now();
       // Throttle: avoid spamming /me if multiple events fire close together.
@@ -119,7 +134,7 @@ export default function DashboardPage() {
     function handleEnrollmentChanged(event: Event) {
       const customEvent = event as CustomEvent<EnrollmentChangedDetail | undefined>;
       const detail = customEvent.detail;
-      if (detail && typeof detail.courseId === "string" && detail.courseId.trim()) {
+      if (detail && typeof detail.courseId === "string" && trimOrEmpty(detail.courseId)) {
         setOptimisticEnrollmentHints((prev) => {
           const next = prev.filter((item) => item.courseId !== detail.courseId);
           return [...next, detail];
@@ -159,26 +174,21 @@ export default function DashboardPage() {
     prevAuthStatusRef.current = authStatus;
   }, [authStatus, router]);
 
-  // Derive enrolled courses + certifications from the shared /me payload.
-  // If the payload doesn't carry enrollments, fall back once to /Enroll/my-courses.
+  // Enrollments: GET /api/Enroll/my-courses (typed). Certifications still read /me when present.
   useEffect(() => {
     if (authStatus !== "authenticated") return;
     let active = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEnrollmentsLoading(true);
+    const loadingTimer = window.setTimeout(() => {
+      if (!active) return;
+      setEnrollmentsLoading(true);
+    }, 0);
 
     async function buildEnrollments() {
-      const meRows = enrollmentsFromMePayload(mePayload);
-      let fallbackRows: Record<string, unknown>[] = [];
-      if (meRows.length === 0) {
-        const fallbackResponse = await getMyEnrolledCourses();
-        if (!active) return;
-        fallbackRows = fallbackResponse.ok
-          ? asRecordList(fallbackResponse.data)
-          : [];
-      }
-      const mergedRows = [...meRows, ...fallbackRows];
-      const mapped = mergedRows.map(mapEnrollmentRow);
+      const enrollRes = await getMyEnrolledCourses();
+      if (!active) return;
+      const mapped = enrollRes.ok
+        ? enrollRes.data.map(enrollmentRowFromMyCourse)
+        : [];
       const seen = new Set<string>();
       const deduped = mapped.filter((course) => {
         const key = `${course.courseId}|${normalizeKey(course.courseCode)}|${normalizeKey(course.title)}`;
@@ -188,7 +198,7 @@ export default function DashboardPage() {
       });
       const withOptimisticHints = [...deduped];
       optimisticEnrollmentHintsRef.current.forEach((hint, idx) => {
-        const hintCourseId = hint.courseId.trim();
+        const hintCourseId = trimOrEmpty(hint.courseId);
         const hintKey = `${hintCourseId}|${normalizeKey(hint.courseCode ?? "")}|${normalizeKey(hint.courseTitle ?? "")}`;
         if (seen.has(hintKey)) return;
         seen.add(hintKey);
@@ -199,6 +209,7 @@ export default function DashboardPage() {
             typeof hint.apiCourseId === "number" && Number.isFinite(hint.apiCourseId)
               ? hint.apiCourseId
               : Number.NaN,
+          batchId: Number.NaN,
           courseCode: hint.courseCode ?? "",
           title: hint.courseTitle ?? hintCourseId,
           progress: 0,
@@ -214,23 +225,62 @@ export default function DashboardPage() {
 
     void buildEnrollments();
     return () => {
+      window.clearTimeout(loadingTimer);
       active = false;
     };
   }, [authStatus, mePayload]);
 
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
     let active = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setBrowseLoading(true);
+    const loadSessions = async () => {
+      const res = await getMyLiveSessions();
+      if (!active) return;
+      if (!res.ok) {
+        setSessionsByCourse({});
+        return;
+      }
+      const next: Record<number, LiveSessionMyItem[]> = {};
+      for (const session of res.sessions) {
+        const courseId = session.course?.id;
+        if (!Number.isFinite(courseId) || !courseId || courseId <= 0) continue;
+        if (!next[courseId]) next[courseId] = [];
+        next[courseId].push(session);
+      }
+      setSessionsByCourse(next);
+    };
+    void loadSessions();
+    return () => {
+      active = false;
+    };
+  }, [authStatus, enrolledCourses]);
+
+  useEffect(() => {
+    let active = true;
+    const loadingTimer = window.setTimeout(() => {
+      if (!active) return;
+      setBrowseLoading(true);
+    }, 0);
     void getCachedProgramsResult().then((res) => {
       if (!active) return;
       setBrowseCourses(res.programs);
       setBrowseLoading(false);
     });
     return () => {
+      window.clearTimeout(loadingTimer);
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!copiedSessionHint) return;
+    const t = window.setTimeout(() => {
+      setCopiedSessionHint(null);
+    }, 1400);
+    return () => {
+      window.clearTimeout(t);
+    };
+  }, [copiedSessionHint]);
 
   if (authStatus === "loading" || (authStatus === "authenticated" && enrollmentsLoading)) {
     return (
@@ -272,6 +322,39 @@ export default function DashboardPage() {
               </p>
             ) : null}
           </div>
+          {isAdminUser ? (
+            <div className="relative overflow-hidden rounded-3xl border border-slate-900/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 p-6 text-white shadow-2xl shadow-slate-900/25 sm:p-8">
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-500/20 blur-3xl" />
+              <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300/95">
+                    Administrator access
+                  </p>
+                  <h2 className="font-display mt-2 text-xl font-bold tracking-tight sm:text-2xl">
+                    Admin console
+                  </h2>
+                  <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-400">
+                    Dashboard, users, payments, analytics, and live sessions — operator tools
+                    separate from the learner experience.
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-7 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-500/30 transition hover:brightness-110"
+                  >
+                    Open admin console
+                  </Link>
+                  <Link
+                    href="/admin/live-sessions/new"
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3 text-sm font-semibold text-white transition hover:border-cyan-400/50 hover:bg-white/5"
+                  >
+                    New meeting
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </header>
 
         <section className="mt-12">
@@ -343,11 +426,37 @@ export default function DashboardPage() {
 
           {activeTab === "courses" ? (
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {enrolledCourses.map((course) => (
-                <article
-                  key={course.id}
-                  className="group flex h-full flex-col rounded-3xl border border-slate-200/80 bg-white p-8 shadow-md transition duration-300 hover:-translate-y-1 hover:border-cyan-200/80 hover:shadow-xl hover:shadow-cyan-500/10"
-                >
+              {enrolledCourses.map((course) => {
+                const sessions =
+                  Number.isFinite(course.apiCourseId) && course.apiCourseId > 0
+                    ? sessionsByCourse[course.apiCourseId] ?? []
+                    : [];
+                const nextSession = pickNextUpcomingByStartTime(sessions);
+                const sessionTs = nextSession
+                  ? new Date(nextSession.startTime).getTime()
+                  : Number.NaN;
+                const nowTs = nowIso ? new Date(nowIso).getTime() : Number.NaN;
+                const minsUntilStart =
+                  Number.isFinite(sessionTs) && Number.isFinite(nowTs)
+                    ? Math.floor((sessionTs - nowTs) / 60000)
+                    : Number.NaN;
+                const isLiveJoinEnabled =
+                  Number.isFinite(minsUntilStart) &&
+                  minsUntilStart <= 10 &&
+                  !!nextSession?.meetingUrl;
+                const countdownText =
+                  !Number.isFinite(minsUntilStart)
+                    ? "Schedule updating"
+                    : minsUntilStart <= 0
+                      ? "Live now"
+                      : minsUntilStart < 60
+                        ? `Starts in ${minsUntilStart} min`
+                        : `Starts in ${Math.floor(minsUntilStart / 60)}h ${minsUntilStart % 60}m`;
+                return (
+                  <article
+                    key={course.id}
+                    className="group flex h-full flex-col rounded-3xl border border-slate-200/80 bg-white p-8 shadow-md transition duration-300 hover:-translate-y-1 hover:border-cyan-200/80 hover:shadow-xl hover:shadow-cyan-500/10"
+                  >
                   <div className="flex items-start justify-between gap-4">
                     <h2 className="font-display text-lg font-bold text-slate-900 transition group-hover:text-cyan-800">
                       {course.title}
@@ -374,8 +483,69 @@ export default function DashboardPage() {
                       Next live session
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-800">
-                      {course.nextSession}
+                      {nextSession
+                        ? formatSessionStartDisplay(nextSession.startTime)
+                        : course.nextSession}
                     </p>
+                    {nextSession ? (
+                      <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50/70 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-cyan-800">
+                            Live meeting
+                          </p>
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-cyan-800 ring-1 ring-cyan-200">
+                            {nextSession.provider}
+                          </span>
+                        </div>
+                        <p className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200">
+                          {countdownText}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {nextSession.title}
+                        </p>
+                        {isLiveJoinEnabled ? (
+                          <Link
+                            href={nextSession.meetingUrl!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-cyan-500/20 transition hover:from-cyan-500 hover:to-blue-500"
+                          >
+                            Join live meeting
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled
+                            className="mt-3 inline-flex w-full cursor-not-allowed items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-500"
+                          >
+                            Join enabled near start time
+                          </button>
+                        )}
+                        {nextSession.password ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {nextSession.password ? (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await navigator.clipboard.writeText(nextSession.password ?? "");
+                                  setCopiedSessionHint(`password-${course.id}`);
+                                }}
+                                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                              >
+                                Copy passcode
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {copiedSessionHint?.endsWith(`-${course.id}`) ? (
+                          <p className="mt-2 text-xs font-medium text-cyan-800">Copied to clipboard.</p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Meeting link will appear here after your trainer schedules a live class for this course.
+                      </p>
+                    )}
                   </div>
 
                   <div className="mt-8 flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
@@ -392,8 +562,9 @@ export default function DashboardPage() {
                       Course info &amp; live class
                     </Link>
                   </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           ) : null}
 
@@ -465,7 +636,7 @@ export default function DashboardPage() {
                       eligibility={course.eligibility}
                       nextBatchLabel={
                         nextBatch
-                          ? `${formatBatchDate(nextBatch.startDate)} · ${nextBatch.capacity > 0 ? `${nextBatch.capacity} seats` : "Seats TBA"}`
+                          ? `${formatBatchDateCompact(nextBatch.startDate)} · ${nextBatch.capacity > 0 ? `${nextBatch.capacity} seats` : "Seats TBA"}`
                           : "Announcing soon"
                       }
                       cardCoverImage={course.cardCoverImage}

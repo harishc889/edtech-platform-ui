@@ -6,10 +6,12 @@ import type {
   PaymentVerifyRequestBody,
   PaymentVerifyResponse,
 } from "@/lib/aspnet-api-types";
+import type { JsonValue } from "@/lib/json-types";
 import axios, { type AxiosError } from "axios";
 import { getErrorMessageFromPayload } from "@/lib/api-error";
 import api from "@/lib/api";
 import { bffUrl } from "@/lib/backend-api-client";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 const GATEWAY_HEADER = { "X-Payment-Gateway": "Razorpay" } as const;
 const SKIP_CSRF = process.env.NEXT_PUBLIC_PAYMENT_SKIP_CSRF === "true";
@@ -35,7 +37,7 @@ async function runBffRequest<T>(
     return { ok: true, status: res.status, data: res.data };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const ax = error as AxiosError<Record<string, unknown>>;
+      const ax = error as AxiosError<unknown>;
       const status = ax.response?.status ?? 0;
       const payload = ax.response?.data;
       return {
@@ -46,14 +48,18 @@ async function runBffRequest<T>(
             payload,
             messageForHttpStatusPayment(status, fallbackError),
           ),
-          details: payload ?? ax.message,
+          details: (payload ?? ax.message) as JsonValue,
         },
       };
     }
     return {
       ok: false,
       status: 0,
-      error: { message: "Network error. Please try again.", details: error },
+      error: {
+        message: "Network error. Please try again.",
+        details:
+          error instanceof Error ? (error.message as JsonValue) : undefined,
+      },
     };
   }
 }
@@ -125,7 +131,7 @@ export async function resolvePaymentCsrfToken(): Promise<
     };
   }
   const token = csrf.data?.csrfToken;
-  if (typeof token !== "string" || !token.trim()) {
+  if (typeof token !== "string" || !trimOrEmpty(token)) {
     return {
       ok: false,
       status: csrf.status,

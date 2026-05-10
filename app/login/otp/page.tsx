@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 export default function OtpLoginPage() {
   const expectedOtp = useMemo(() => "123456", []);
@@ -106,7 +107,7 @@ export default function OtpLoginPage() {
             <button
               type="button"
               onClick={handleSendOtp}
-              disabled={isSending || !identifier.trim()}
+              disabled={isSending || !trimOrEmpty(identifier)}
               className="flex w-full items-center justify-center rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-4 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSending ? "Sending..." : "Send OTP"}

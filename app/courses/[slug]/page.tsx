@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import JsonLd from "@/app/components/seo/json-ld";
 import CourseDetailClient from "./course-detail-client";
+import type { CourseByCodeDto } from "@/lib/course-api-types";
 import { getBackendApiPrefix, getBackendOrigin } from "@/lib/backend-env";
 import { breadcrumbSchema, courseSchema } from "@/lib/seo/schemas";
+import { trimOrUndefined } from "@/lib/string-trim";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -32,32 +34,15 @@ const getCourseSeoData = cache(async (slug: string): Promise<{
   try {
     const res = await fetch(url, { next: { revalidate: 900 } });
     if (!res.ok) return null;
-    const data = (await res.json()) as Record<string, unknown>;
+    const data = (await res.json()) as CourseByCodeDto;
     return {
-      title:
-        typeof data.title === "string"
-          ? data.title
-          : typeof data.name === "string"
-            ? data.name
-            : undefined,
+      title: trimOrUndefined(data.title),
       description:
-        typeof data.shortDescription === "string"
-          ? data.shortDescription
-          : typeof data.description === "string"
-            ? data.description
-            : undefined,
+        trimOrUndefined(data.description) ?? trimOrUndefined(data.subtitle),
       image:
-        typeof data.courseDetailCoverImage === "string"
-          ? data.courseDetailCoverImage
-          : typeof data.cardCoverImage === "string"
-            ? data.cardCoverImage
-            : undefined,
-      priceInr:
-        typeof data.upfrontInr === "number"
-          ? data.upfrontInr
-          : typeof data.price === "number"
-            ? data.price
-            : undefined,
+        trimOrUndefined(data.courseDetailCoverImage) ??
+        trimOrUndefined(data.cardCoverImage),
+      priceInr: Number.isFinite(data.upfrontInr) ? data.upfrontInr : undefined,
     };
   } catch {
     return null;

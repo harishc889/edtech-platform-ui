@@ -1,4 +1,5 @@
 import { getCachedPrograms } from "@/lib/client-course-cache";
+import { trimOrEmpty } from "@/lib/string-trim";
 import type { EnrollmentRow } from "@/lib/enrollment-map";
 import type { Program } from "@/lib/program-catalog";
 
@@ -10,7 +11,7 @@ export function getLearnCourseSlugForEnrollment(
   enrollment: EnrollmentRow,
   catalog: Pick<Program, "id" | "apiCourseId">[],
 ): string {
-  const trimmed = enrollment.courseCode.trim();
+  const trimmed = trimOrEmpty(enrollment.courseCode);
   if (trimmed) return trimmed;
   if (Number.isFinite(enrollment.apiCourseId)) {
     const hit = catalog.find((p) => p.apiCourseId === enrollment.apiCourseId);
