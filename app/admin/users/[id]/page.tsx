@@ -8,11 +8,12 @@ import { AdminPageHeader } from "@/app/components/admin/admin-page-header";
 import { useToast } from "@/app/components/toast-provider";
 import { getAdminUserById, patchAdminUserRole } from "@/lib/admin-service";
 import type { AdminRole, AdminUserSummary } from "@/lib/admin-types";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 const DEFAULT_ASSIGNABLE_ROLES: AdminRole[] = ["Admin", "User"];
 
 function roleSelectOptions(current?: AdminRole): AdminRole[] {
-  const r = current != null ? String(current).trim() : "";
+  const r = current != null ? trimOrEmpty(String(current)) : "";
   if (!r) return [...DEFAULT_ASSIGNABLE_ROLES];
   const defaults = new Set(DEFAULT_ASSIGNABLE_ROLES.map(String));
   if (!defaults.has(r)) return [r as AdminRole, ...DEFAULT_ASSIGNABLE_ROLES];
@@ -76,13 +77,14 @@ export default function AdminUserDetailPage() {
   );
 
   const roleDirty =
-    user != null && String(selectedRole).trim() !== String(user.role).trim();
+    user != null &&
+    trimOrEmpty(String(selectedRole)) !== trimOrEmpty(String(user.role));
 
   async function handleSaveRole() {
     if (userId == null || user == null || saving || !roleDirty) return;
     setSaving(true);
     const res = await patchAdminUserRole(userId, {
-      role: String(selectedRole).trim(),
+      role: trimOrEmpty(String(selectedRole)),
     });
     setSaving(false);
     if (!res.ok) {
@@ -98,7 +100,7 @@ export default function AdminUserDetailPage() {
   }
 
   const title =
-    user?.name?.trim() || (userId != null ? `User #${userId}` : "User");
+    trimOrEmpty(user?.name) || (userId != null ? `User #${userId}` : "User");
 
   return (
     <AdminAccessGate loginNextPath={`/admin/users/${idStr ?? ""}`}>

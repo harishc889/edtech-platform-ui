@@ -1,3 +1,5 @@
+import { trimOrEmpty } from "@/lib/string-trim";
+
 export function getErrorMessageFromPayload(
   payload: unknown,
   fallback: string,
@@ -5,27 +7,30 @@ export function getErrorMessageFromPayload(
   if (!payload || typeof payload !== "object") {
     return fallback;
   }
-  const p = payload as Record<string, unknown>;
-  const message = p.message;
-  if (typeof message === "string" && message.trim()) {
-    return message;
+  if ("message" in payload && typeof payload.message === "string") {
+    const msg = trimOrEmpty(payload.message);
+    if (msg) return msg;
   }
-  const detail = p.detail;
-  if (typeof detail === "string" && detail.trim()) {
-    return detail;
+  if ("detail" in payload && typeof payload.detail === "string") {
+    const d = trimOrEmpty(payload.detail);
+    if (d) return d;
   }
-  const title = p.title;
-  if (typeof title === "string" && title.trim()) {
-    return title;
+  if ("title" in payload && typeof payload.title === "string") {
+    const t = trimOrEmpty(payload.title);
+    if (t) return t;
   }
-  const err = p.error;
-  if (typeof err === "string" && err.trim()) {
-    return err;
-  }
-  if (err && typeof err === "object" && "message" in err) {
-    const nested = (err as { message?: unknown }).message;
-    if (typeof nested === "string" && nested.trim()) {
-      return nested;
+  if ("error" in payload) {
+    const err = payload.error;
+    if (typeof err === "string") {
+      const es = trimOrEmpty(err);
+      if (es) return es;
+    }
+    if (err && typeof err === "object" && "message" in err) {
+      const nested = err.message;
+      if (typeof nested === "string") {
+        const ns = trimOrEmpty(nested);
+        if (ns) return ns;
+      }
     }
   }
   return fallback;

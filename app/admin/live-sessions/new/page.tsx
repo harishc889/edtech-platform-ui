@@ -2,19 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminAccessGate } from "@/app/components/admin/admin-access-gate";
 import { AdminPageHeader } from "@/app/components/admin/admin-page-header";
 import { useToast } from "@/app/components/toast-provider";
-import { asRecordList } from "@/lib/api-normalize";
+import type { BatchByCourseDto } from "@/lib/batch-types";
 import { buildAdminBatchOptions } from "@/lib/admin-batch-options";
 import { getBatchesForCourse } from "@/lib/batch-service";
-import { getCachedPrograms } from "@/lib/client-course-cache";
+import {
+  getCachedProgramsResult,
+  invalidateCachedPrograms,
+} from "@/lib/client-course-cache";
 import { createLiveSession } from "@/lib/live-session-service";
 import type {
   AdminBatchOption,
   LiveSessionAdminView,
 } from "@/lib/live-session-types";
+import { trimOrEmpty } from "@/lib/string-trim";
 import type { Program } from "@/lib/program-catalog";
 
 const DURATION_PRESETS = [45, 60, 90, 120, 180];
@@ -25,6 +29,7 @@ export default function AdminNewLiveSessionPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [batchOptions, setBatchOptions] = useState<AdminBatchOption[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
 
   const [courseSlug, setCourseSlug] = useState("");
   const [batchId, setBatchId] = useState("");
@@ -35,22 +40,27 @@ export default function AdminNewLiveSessionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<LiveSessionAdminView | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    void getCachedPrograms()
-      .then((rows) => {
-        if (!active) return;
-        setPrograms(rows);
-        setBatchOptions(buildAdminBatchOptions(rows));
-      })
-      .finally(() => {
-        if (!active) return;
-        setCatalogLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+  const loadCatalog = useCallback(async () => {
+    setCatalogLoading(true);
+    setCatalogError(null);
+    const result = await getCachedProgramsResult();
+    setPrograms(result.programs);
+    setBatchOptions(buildAdminBatchOptions(result.programs));
+    if (!result.ok && result.message) {
+      setCatalogError(result.message);
+    } else if (result.ok && result.programs.length === 0) {
+      setCatalogError(
+        "No courses were returned from GET /Course. Check that the API returns an array or a wrapped list (items/data/results/courses).",
+      );
+    } else {
+      setCatalogError(null);
+    }
+    setCatalogLoading(false);
   }, []);
+
+  useEffect(() => {
+    void loadCatalog();
+  }, [loadCatalog]);
 
   const selectedProgram = useMemo(
     () => programs.find((p) => p.id === courseSlug),
@@ -63,21 +73,15 @@ export default function AdminNewLiveSessionPage() {
     let cancelled = false;
     void getBatchesForCourse(selectedProgram.apiCourseId).then((res) => {
       if (cancelled || !res.ok || res.data == null) return;
-      const rows = asRecordList(res.data);
-      const extras: AdminBatchOption[] = rows.map((raw, idx) => ({
-        batchId: Number(raw.id ?? raw.batchId ?? idx + 1),
+      const rows: BatchByCourseDto[] = res.data;
+      const extras: AdminBatchOption[] = rows.map((raw) => ({
+        batchId: raw.id,
         courseTitle: selectedProgram.title,
         courseSlug: selectedProgram.id,
         apiCourseId: selectedProgram.apiCourseId,
-        mentorName:
-          typeof raw.mentorName === "string"
-            ? raw.mentorName
-            : String(raw.mentor ?? "Faculty"),
-        startDate:
-          typeof raw.startDate === "string"
-            ? raw.startDate
-            : String(raw.startDate ?? ""),
-        label: `${selectedProgram.title} · batch ${String(raw.id ?? raw.batchId ?? idx)}`,
+        mentorName: trimOrEmpty(raw.mentorName) || "Faculty",
+        startDate: raw.startDate,
+        label: `${selectedProgram.title} · batch ${raw.id}`,
       }));
       setBatchOptions((prev) => [
         ...prev.filter((o) => o.courseSlug !== selectedProgram.id),
@@ -122,10 +126,10 @@ export default function AdminNewLiveSessionPage() {
     setSubmitting(true);
     const res = await createLiveSession({
       batchId: bid,
-      title: title.trim(),
+      title: trimOrEmpty(title),
       startTime: startIso,
       durationMinutes,
-      password: password.trim() || null,
+      password: trimOrEmpty(password) || null,
       videoProvider: "Zoom",
     });
     setSubmitting(false);
@@ -166,7 +170,7 @@ export default function AdminNewLiveSessionPage() {
               <>
                 <button
                   type="button"
-                  onClick={() => void copy(created.meetingUrl, "Join URL")}
+                  onClick={() => void copy(created.meetingUrl!, "Join URL")}
                   className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50"
                 >
                   Copy learner join
@@ -224,6 +228,21 @@ export default function AdminNewLiveSessionPage() {
               <label className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
                 Course
               </label>
+              {catalogError ? (
+                <div className="mt-2 space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p>{catalogError}</p>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                    onClick={() => {
+                      invalidateCachedPrograms();
+                      void loadCatalog();
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : null}
               <select
                 required
                 disabled={catalogLoading}

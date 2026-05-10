@@ -12,6 +12,7 @@ import {
   authLabelClass,
   authPrimaryButtonClass,
 } from "@/app/components/password-field-with-toggle";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 /**
  * Reads the `?next=` query param and returns it only when it is a safe
@@ -53,7 +54,7 @@ export default function LoginPage() {
   }, [auth.status, router]);
 
   function validate(nextEmail: string, nextPassword: string) {
-    const nextEmailError = nextEmail ? null : "Email is required.";
+    const nextEmailError = trimOrEmpty(nextEmail) ? null : "Email is required.";
     const nextPasswordError = nextPassword ? null : "Password is required.";
 
     setEmailError(nextEmailError);
@@ -68,7 +69,9 @@ export default function LoginPage() {
     if (isSubmitting) return;
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
-    const nextEmail = (formData.get("email")?.toString() ?? email).trim();
+    const nextEmail = trimOrEmpty(
+      formData.get("email")?.toString() ?? email,
+    );
     const nextPassword = formData.get("password")?.toString() ?? password;
     setEmail(nextEmail);
     setPassword(nextPassword);

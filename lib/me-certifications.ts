@@ -1,26 +1,26 @@
-export function certificationsFromMePayload(data: unknown): Record<string, unknown>[] {
-  if (!data || typeof data !== "object") return [];
-  const o = data as Record<string, unknown>;
-  const user =
-    o.user && typeof o.user === "object"
-      ? (o.user as Record<string, unknown>)
-      : null;
-  const candidates = [
-    o.certifications,
-    o.certificates,
-    o.myCertifications,
-    o.myCertificates,
-    user?.certifications,
-    user?.certificates,
-    user?.myCertifications,
-    user?.myCertificates,
+import type {
+  AuthMeCertificationDto,
+  AuthMePayload,
+} from "@/lib/auth-me-types";
+import { trimOrUndefined } from "@/lib/string-trim";
+
+export function certificationsFromMePayload(
+  data: AuthMePayload | null | undefined,
+): AuthMeCertificationDto[] {
+  if (!data) return [];
+  const buckets = [
+    data.certifications,
+    data.certificates,
+    data.myCertifications,
+    data.myCertificates,
+    data.user?.certifications,
+    data.user?.certificates,
+    data.user?.myCertifications,
+    data.user?.myCertificates,
   ];
-  for (const candidate of candidates) {
-    const rows = Array.isArray(candidate)
-      ? candidate.filter((item) => item && typeof item === "object")
-      : [];
-    if (rows.length > 0) {
-      return rows as Record<string, unknown>[];
+  for (const candidate of buckets) {
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      return candidate;
     }
   }
   return [];
@@ -35,7 +35,7 @@ export type CertificationRow = {
 };
 
 export function mapCertificationRow(
-  raw: Record<string, unknown>,
+  raw: AuthMeCertificationDto,
   index: number,
 ): CertificationRow {
   const id = String(
@@ -52,16 +52,24 @@ export function mapCertificationRow(
     raw.issuedOn ?? raw.issueDate ?? raw.awardedAt ?? raw.createdAt ?? "—",
   );
   const credentialId =
-    typeof raw.credentialId === "string" && raw.credentialId.trim()
-      ? raw.credentialId.trim()
-      : typeof raw.certificateCode === "string" && raw.certificateCode.trim()
-        ? raw.certificateCode.trim()
-        : null;
+    trimOrUndefined(
+      typeof raw.credentialId === "string" ? raw.credentialId : undefined,
+    ) ??
+    trimOrUndefined(
+      typeof raw.certificateCode === "string"
+        ? raw.certificateCode
+        : undefined,
+    ) ??
+    null;
   const verifyUrl =
-    typeof raw.verifyUrl === "string" && raw.verifyUrl.trim()
-      ? raw.verifyUrl.trim()
-      : typeof raw.certificateUrl === "string" && raw.certificateUrl.trim()
-        ? raw.certificateUrl.trim()
-        : null;
+    trimOrUndefined(
+      typeof raw.verifyUrl === "string" ? raw.verifyUrl : undefined,
+    ) ??
+    trimOrUndefined(
+      typeof raw.certificateUrl === "string"
+        ? raw.certificateUrl
+        : undefined,
+    ) ??
+    null;
   return { id, title, issuedOn, credentialId, verifyUrl };
 }

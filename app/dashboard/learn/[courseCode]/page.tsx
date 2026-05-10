@@ -4,25 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import EnrolledCoursePlayer from "@/app/components/enrolled-course-player";
-import {
-  asRecordList,
-  enrollmentsFromMePayload,
-} from "@/lib/api-normalize";
 import { useAuth } from "@/lib/auth-context";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import { mapCourseByCodeDtoToProgram } from "@/lib/course-program-adapter";
 import { resolveLearnSlugToCourseCode } from "@/lib/learn-course-route";
 import { getCourseById } from "@/lib/course-service";
 import { getMyEnrolledCourses } from "@/lib/enroll-service";
 import {
+  enrollmentRowFromMyCourse,
   findEnrollmentForCourse,
-  mapEnrollmentRow,
+  type EnrollmentRow,
 } from "@/lib/enrollment-map";
 import {
   certificationsFromMePayload,
   mapCertificationRow,
 } from "@/lib/me-certifications";
 import type { Program } from "@/lib/program-catalog";
-
 type PageProps = {
   params: Promise<{ courseCode: string }>;
 };
@@ -85,17 +81,11 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
     setCourse(null);
 
     async function run() {
-      const meRows = enrollmentsFromMePayload(mePayload);
-      let fallbackRows: Record<string, unknown>[] = [];
-      if (meRows.length === 0) {
-        const fallbackResponse = await getMyEnrolledCourses();
-        if (!active) return;
-        fallbackRows = fallbackResponse.ok
-          ? asRecordList(fallbackResponse.data)
-          : [];
-      }
-      const mergedRows = [...meRows, ...fallbackRows];
-      const enrollmentRows = mergedRows.map(mapEnrollmentRow);
+      const enrollRes = await getMyEnrolledCourses();
+      if (!active) return;
+      const enrollmentRows: EnrollmentRow[] = enrollRes.ok
+        ? enrollRes.data.map(enrollmentRowFromMyCourse)
+        : [];
       const seen = new Set<string>();
       const deduped = enrollmentRows.filter((row) => {
         const key = `${row.courseId}|${row.courseCode}|${row.title}`;
@@ -115,17 +105,16 @@ export default function DashboardLearnCoursePage({ params }: PageProps) {
         setLoading(false);
         return;
       }
-      const body =
-        courseRes.data && typeof courseRes.data === "object"
-          ? (courseRes.data as Record<string, unknown>)
-          : null;
-      if (!body) {
+      if (!courseRes.data) {
         setError("Course details are unavailable.");
         setLoading(false);
         return;
       }
 
-      const program = mapCourseToProgram(body, courseCodeForApi);
+      const program = mapCourseByCodeDtoToProgram(
+        courseRes.data,
+        courseCodeForApi,
+      );
       const enrollment = findEnrollmentForCourse(deduped, program, slug);
       if (!enrollment) {
         router.replace("/dashboard");

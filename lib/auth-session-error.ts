@@ -1,11 +1,13 @@
 type SessionInactivePayload = {
-  error?: unknown;
-  requiresLogin?: unknown;
-  message?: unknown;
+  error?: string;
+  requiresLogin?: boolean;
+  message?: string;
 };
 
+import { trimOrEmpty } from "@/lib/string-trim";
+
 type ErrorLike = {
-  message?: unknown;
+  message?: string;
   details?: unknown;
 };
 
@@ -24,12 +26,14 @@ export function getSessionInactiveMessage(
   const requiresLogin = payload.requiresLogin === true;
   if (!isInactiveSession && !requiresLogin) return null;
 
-  if (typeof payload.message === "string" && payload.message.trim()) {
-    return payload.message;
+  if (typeof payload.message === "string") {
+    const m = trimOrEmpty(payload.message);
+    if (m) return m;
   }
 
-  if (typeof error?.message === "string" && error.message.trim()) {
-    return error.message;
+  if (typeof error?.message === "string") {
+    const m = trimOrEmpty(error.message);
+    if (m) return m;
   }
 
   return "Your session has expired. Please login again.";

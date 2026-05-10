@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { formatBatchDateCompact } from "@/lib/display-format";
 import { toModuleDescriptionHtml } from "@/lib/module-description-html";
 import type { Program } from "@/lib/program-catalog";
 import {
@@ -98,17 +99,6 @@ export default function CourseDetailShowcase({
     [course.upfrontInr],
   );
   const hasBatches = batches.length > 0;
-
-  function formatBatchDate(value: string) {
-    if (!value) return "TBA";
-    const dt = new Date(value);
-    if (Number.isNaN(dt.getTime())) return "TBA";
-    return new Intl.DateTimeFormat("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(dt);
-  }
 
   return (
     <article className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50">
@@ -219,7 +209,7 @@ export default function CourseDetailShowcase({
                     </p>
                     {/* <p className="mt-1 text-base font-bold text-slate-900">{batch.mentorName}</p> */}
                     <p className="mt-1 text-sm text-slate-600">
-                      {formatBatchDate(batch.startDate)} - {formatBatchDate(batch.endDate)}
+                      {formatBatchDateCompact(batch.startDate)} - {formatBatchDateCompact(batch.endDate)}
                     </p>
                     <p className="mt-1 text-xs font-semibold text-sky-800">
                       Capacity: {batch.capacity > 0 ? batch.capacity : "TBA"} seats

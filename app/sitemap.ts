@@ -1,15 +1,15 @@
 import type { MetadataRoute } from "next";
+import { unwrapArray } from "@/lib/api-normalize";
+import type { PublishedCourseDto } from "@/lib/course-api-types";
+import { trimOrUndefined } from "@/lib/string-trim";
 import { getBackendApiPrefix, getBackendOrigin } from "@/lib/backend-env";
-import { asRecordList } from "@/lib/api-normalize";
 
 const BASE_URL = "https://labimacademy.com";
 
-function pickCourseSlug(raw: Record<string, unknown>) {
-  const value = raw.courseCode ?? raw.slug ?? raw.code ?? raw.id;
-  if (typeof value !== "string" && typeof value !== "number") return null;
-  const str = String(value).trim();
-  if (!str) return null;
-  return str.replace(/\s+/g, "-");
+function slugFromPublishedCourse(dto: PublishedCourseDto): string | null {
+  const code = trimOrUndefined(dto.courseCode);
+  if (!code) return null;
+  return code.replace(/\s+/g, "-");
 }
 
 async function fetchCourseSlugs(): Promise<string[]> {
@@ -22,9 +22,9 @@ async function fetchCourseSlugs(): Promise<string[]> {
     const res = await fetch(url, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     const data = await res.json();
-    const rows = asRecordList(data);
+    const rows = unwrapArray<PublishedCourseDto>(data);
     return rows
-      .map(pickCourseSlug)
+      .map(slugFromPublishedCourse)
       .filter((slug): slug is string => Boolean(slug));
   } catch {
     return [];

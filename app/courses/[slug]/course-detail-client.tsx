@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CourseDetailShowcase from "@/app/components/course-detail-showcase";
-import { asRecordList } from "@/lib/api-normalize";
+import type { BatchByCourseDto } from "@/lib/batch-types";
 import { getBatchesForCourse } from "@/lib/batch-service";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import { mapCourseByCodeDtoToProgram } from "@/lib/course-program-adapter";
 import { getCourseById } from "@/lib/course-service";
 import type { Program } from "@/lib/program-catalog";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 type Props = {
   slug: string;
@@ -21,27 +22,14 @@ type CourseBatch = {
   capacity: number;
 };
 
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
-function toBatch(raw: Record<string, unknown>, index: number): CourseBatch {
-  const id = toNumber(raw.id ?? raw.batchId, index + 1);
-  const mentorName =
-    typeof raw.mentorName === "string" && raw.mentorName.trim()
-      ? raw.mentorName.trim()
-      : "Faculty will be assigned";
-  const startDate =
-    typeof raw.startDate === "string" ? raw.startDate : String(raw.startDate ?? "");
-  const endDate =
-    typeof raw.endDate === "string" ? raw.endDate : String(raw.endDate ?? "");
-  const capacity = toNumber(raw.capacity, 0);
-  return { id, mentorName, startDate, endDate, capacity };
+function uiBatchFromDto(dto: BatchByCourseDto): CourseBatch {
+  return {
+    id: dto.id,
+    mentorName: trimOrEmpty(dto.mentorName) || "Faculty will be assigned",
+    startDate: dto.startDate,
+    endDate: dto.endDate,
+    capacity: dto.capacity,
+  };
 }
 
 export default function CourseDetailClient({ slug }: Props) {
@@ -63,16 +51,13 @@ export default function CourseDetailClient({ slug }: Props) {
         setLoading(false);
         return;
       }
-      const body =
-        res.data && typeof res.data === "object"
-          ? (res.data as Record<string, unknown>)
-          : null;
-      if (!body) {
+      const dto = res.data;
+      if (!dto) {
         setError("Course details are unavailable.");
         setLoading(false);
         return;
       }
-      setCourse(mapCourseToProgram(body, slug));
+      setCourse(mapCourseByCodeDtoToProgram(dto, slug));
       setLoading(false);
     });
     return () => {
@@ -90,14 +75,12 @@ export default function CourseDetailClient({ slug }: Props) {
     setBatchesLoading(true);
     void getBatchesForCourse(course.apiCourseId).then((res) => {
       if (!active) return;
-      if (!res.ok) {
+      if (!res.ok || !res.data) {
         setBatches([]);
         setBatchesLoading(false);
         return;
       }
-      const mapped = asRecordList(res.data)
-        .map(toBatch)
-        .filter((batch) => Number.isFinite(batch.id));
+      const mapped = res.data.map(uiBatchFromDto).filter((b) => Number.isFinite(b.id));
       setBatches(mapped);
       setSelectedBatchId(mapped[0]?.id ?? null);
       setBatchesLoading(false);
@@ -129,12 +112,15 @@ export default function CourseDetailClient({ slug }: Props) {
             ← Featured courses
           </Link>
         </nav>
+
         {loading ? (
           <p className="text-sm text-slate-600">Loading course details...</p>
         ) : null}
+
         {error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : null}
+
         {course && !loading ? (
           <CourseDetailShowcase
             course={course}

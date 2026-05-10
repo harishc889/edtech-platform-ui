@@ -1,10 +1,10 @@
 import { backendRequestSafe } from "@/lib/backend-api-client";
 import type {
   AdminDashboardResponse,
-  AdminEnrollmentAnalyticsPoint,
+  AdminEnrollmentAnalyticsResponse,
   AdminPaymentsQuery,
   AdminPaymentSummary,
-  AdminRevenueAnalyticsPoint,
+  AdminRevenueAnalyticsResponse,
   AdminUserRolePatchRequest,
   AdminUserRolePatchResponse,
   AdminUsersQuery,
@@ -41,7 +41,7 @@ export function patchAdminUserRole(id: number, body: AdminUserRolePatchRequest) 
 
 /** GET /api/Admin/payments?status=&userId= */
 export function getAdminPayments(params?: AdminPaymentsQuery) {
-  const q: Record<string, unknown> = {};
+  const q: AdminPaymentsQuery = {};
   if (params?.status) q.status = params.status;
   if (params?.userId != null) q.userId = params.userId;
   return backendRequestSafe<AdminPaymentSummary[]>(
@@ -52,7 +52,7 @@ export function getAdminPayments(params?: AdminPaymentsQuery) {
 
 /** GET /api/Admin/analytics/enrollments */
 export function getAdminAnalyticsEnrollments() {
-  return backendRequestSafe<AdminEnrollmentAnalyticsPoint[]>([
+  return backendRequestSafe<AdminEnrollmentAnalyticsResponse>([
     "Admin",
     "analytics",
     "enrollments",
@@ -61,7 +61,7 @@ export function getAdminAnalyticsEnrollments() {
 
 /** GET /api/Admin/analytics/revenue?months= */
 export function getAdminAnalyticsRevenue(months?: number) {
-  return backendRequestSafe<AdminRevenueAnalyticsPoint[]>([
+  return backendRequestSafe<AdminRevenueAnalyticsResponse>([
     "Admin",
     "analytics",
     "revenue",

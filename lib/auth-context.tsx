@@ -10,9 +10,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { profileFromMePayload } from "@/lib/api-normalize";
 import {
-  normalizeAuthMePayload,
+  authProfileFromMePayload,
   type AuthMePayload,
 } from "@/lib/auth-me-types";
 import { fetchCurrentUser, type AuthUser } from "@/lib/auth-service";
@@ -49,7 +48,7 @@ export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 type AuthContextValue = {
   user: AuthUser | null;
-  /** Normalized `/api/Auth/me` payload — typed claims + enrollments / certs on root. */
+  /** Normalized `/api/Auth/me` payload (`user`, `claims`, optional certs / legacy role fields). */
   mePayload: AuthMePayload | null;
   status: AuthStatus;
   isAuthenticated: boolean;
@@ -115,13 +114,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       const payload = response.data ?? null;
-      const profile = profileFromMePayload(payload) as AuthUser | null;
-      const resolved = profile ?? (payload as AuthUser | null);
-      setUserState(resolved);
-      setMePayload(normalizeAuthMePayload(payload));
-      setStatus(resolved ? "authenticated" : "unauthenticated");
-      writeCachedUser(resolved);
-      return resolved;
+      const profile = authProfileFromMePayload(payload);
+      setUserState(profile);
+      setMePayload(payload);
+      setStatus(profile ? "authenticated" : "unauthenticated");
+      writeCachedUser(profile);
+      return profile;
     })();
     inFlightRef.current = task;
     try {
@@ -132,14 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setUser = useCallback(
-    (next: AuthUser | null, nextMePayload?: unknown) => {
+    (next: AuthUser | null, nextMePayload?: AuthMePayload | null) => {
       setUserState(next);
       if (typeof nextMePayload !== "undefined") {
-        setMePayload(
-          nextMePayload === null
-            ? null
-            : normalizeAuthMePayload(nextMePayload),
-        );
+        setMePayload(nextMePayload);
       } else if (!next) {
         setMePayload(null);
       }

@@ -29,8 +29,8 @@ api.interceptors.response.use(
   (error) => {
     if (typeof window !== "undefined" && axios.isAxiosError(error)) {
       const payload =
-        error.response && typeof error.response.data === "object"
-          ? (error.response.data as Record<string, unknown>)
+        error.response?.data && typeof error.response.data === "object"
+          ? error.response.data
           : null;
       const message = getSessionInactiveMessage({
         message: error.message,

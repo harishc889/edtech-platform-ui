@@ -11,7 +11,7 @@ import {
   deleteLiveSession,
   getLiveSessionsForBatch,
 } from "@/lib/live-session-service";
-import type { LiveSessionAdminView } from "@/lib/live-session-types";
+import type { LiveSessionBatchItem } from "@/lib/live-session-types";
 import type { Program } from "@/lib/program-catalog";
 
 function formatWhen(iso: string) {
@@ -33,7 +33,7 @@ export default function AdminLiveSessionsHubPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [batchId, setBatchId] = useState<string>("");
-  const [sessions, setSessions] = useState<LiveSessionAdminView[]>([]);
+  const [sessions, setSessions] = useState<LiveSessionBatchItem[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -85,7 +85,10 @@ export default function AdminLiveSessionsHubPage() {
   }, [batchId, showToast]);
 
   useEffect(() => {
-    void loadSessions();
+    const timer = window.setTimeout(() => {
+      void loadSessions();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadSessions]);
 
   async function handleCopy(text: string, label: string) {
@@ -285,7 +288,7 @@ export default function AdminLiveSessionsHubPage() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  void handleCopy(row.meetingUrl, "Learner join URL")
+                                  void handleCopy(row.meetingUrl!, "Learner join URL")
                                 }
                                 className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-cyan-800 transition hover:bg-cyan-50"
                               >

@@ -8,8 +8,9 @@ import { useToast } from "@/app/components/toast-provider";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminFromMePayload } from "@/lib/auth-role";
 import { logout } from "@/lib/auth-service";
-import { getCachedPrograms } from "@/lib/client-course-cache";
+import { getCachedProgramsResult } from "@/lib/client-course-cache";
 import type { Program } from "@/lib/program-catalog";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -30,7 +31,10 @@ export default function SiteHeader() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [programsLoading, setProgramsLoading] = useState(false);
+  const [programsLoading, setProgramsLoading] = useState(true);
+  const [programsLoadError, setProgramsLoadError] = useState<string | null>(
+    null,
+  );
   const { showToast } = useToast();
   const desktopCoursesRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -58,28 +62,17 @@ export default function SiteHeader() {
   }, []);
 
   useEffect(() => {
-    if ((!desktopCoursesOpen && !coursesOpen) || programs.length > 0 || programsLoading) {
-      return;
-    }
     let active = true;
-    setProgramsLoading(true);
-    void getCachedPrograms()
-      .then((rows) => {
-        if (!active) return;
-        setPrograms(rows);
-      })
-      .catch(() => {
-        if (!active) return;
-        setPrograms([]);
-      })
-      .finally(() => {
-        if (!active) return;
-        setProgramsLoading(false);
-      });
+    void getCachedProgramsResult().then((result) => {
+      if (!active) return;
+      setPrograms(result.programs);
+      setProgramsLoadError(result.ok ? null : result.message);
+      setProgramsLoading(false);
+    });
     return () => {
       active = false;
     };
-  }, [coursesOpen, desktopCoursesOpen, programs.length, programsLoading]);
+  }, []);
 
   function clearClientAuthArtifacts() {
     const removableKeys = [
@@ -134,7 +127,9 @@ export default function SiteHeader() {
   }
 
   const profileLabel =
-    currentUser?.name?.trim() || currentUser?.email?.trim() || "Profile";
+    trimOrEmpty(currentUser?.name) ||
+    trimOrEmpty(currentUser?.email) ||
+    "Profile";
   const initials = profileLabel.slice(0, 1).toUpperCase();
 
   return (
@@ -201,6 +196,11 @@ export default function SiteHeader() {
               <div className="absolute left-0 top-full z-50 mt-3 w-80 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/60">
                 {programsLoading && programs.length === 0 ? (
                   <p className="px-3 py-2.5 text-sm text-slate-500">Loading courses...</p>
+                ) : null}
+                {!programsLoading && programs.length === 0 ? (
+                  <p className="px-3 py-2.5 text-sm text-slate-500">
+                    {programsLoadError ?? "No courses available."}
+                  </p>
                 ) : null}
                 {programs.map((course) => (
                   <Link
@@ -372,6 +372,11 @@ export default function SiteHeader() {
               <div className="ml-2 space-y-1 rounded-xl border border-slate-100 bg-slate-50/70 p-2">
                 {programsLoading && programs.length === 0 ? (
                   <p className="px-3 py-2 text-sm text-slate-500">Loading courses...</p>
+                ) : null}
+                {!programsLoading && programs.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-slate-500">
+                    {programsLoadError ?? "No courses available."}
+                  </p>
                 ) : null}
                 {programs.map((course) => (
                   <Link

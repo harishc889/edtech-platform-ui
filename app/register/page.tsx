@@ -10,9 +10,10 @@ import {
   authLabelClass,
   authPrimaryButtonClass,
 } from "@/app/components/password-field-with-toggle";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimOrEmpty(email));
 }
 
 export default function RegisterPage() {
@@ -42,8 +43,8 @@ export default function RegisterPage() {
   ) {
     const nextErrors: typeof fieldErrors = {};
 
-    if (!nextName) nextErrors.name = "Name is required.";
-    if (!nextEmail) nextErrors.email = "Email is required.";
+    if (!trimOrEmpty(nextName)) nextErrors.name = "Name is required.";
+    if (!trimOrEmpty(nextEmail)) nextErrors.email = "Email is required.";
     else if (!isValidEmail(nextEmail))
       nextErrors.email = "Enter a valid email address.";
 
@@ -69,8 +70,8 @@ export default function RegisterPage() {
 
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
-    const nextName = (formData.get("name")?.toString() ?? name).trim();
-    const nextEmail = (formData.get("email")?.toString() ?? email).trim();
+    const nextName = trimOrEmpty(formData.get("name")?.toString() ?? name);
+    const nextEmail = trimOrEmpty(formData.get("email")?.toString() ?? email);
     const nextPassword = formData.get("password")?.toString() ?? password;
     const nextConfirmPassword =
       formData.get("confirmPassword")?.toString() ?? confirmPassword;

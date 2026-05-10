@@ -11,6 +11,7 @@ import {
   type TouchEvent,
   type ReactNode,
 } from "react";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 type ToastType = "success" | "error" | "info";
 
@@ -227,8 +228,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     function onSessionInactive(event: Event) {
       const detail = (event as CustomEvent<{ message?: string }>).detail;
       const message =
-        typeof detail?.message === "string" && detail.message.trim()
-          ? detail.message
+        typeof detail?.message === "string" && trimOrEmpty(detail.message)
+          ? trimOrEmpty(detail.message)
           : "Your session has expired. Please login again.";
       showToast({ type: "error", message, durationMs: 4200 });
     }

@@ -1,3 +1,5 @@
+import { trimOrEmpty } from "@/lib/string-trim";
+
 export function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -9,7 +11,7 @@ export function escapeHtml(value: string) {
 
 /** Turns plain-text module outlines into safe HTML; passes through existing ul/ol/p markup. */
 export function toModuleDescriptionHtml(desc: string) {
-  const trimmed = desc.trim();
+  const trimmed = trimOrEmpty(desc);
   if (!trimmed) return "";
 
   if (/<(ul|ol|li|p|br)\b/i.test(trimmed)) {

@@ -7,6 +7,7 @@ import { AdminAccessGate } from "@/app/components/admin/admin-access-gate";
 import { AdminPageHeader } from "@/app/components/admin/admin-page-header";
 import { getAdminPayments, getAdminUsers } from "@/lib/admin-service";
 import type { AdminPaymentSummary, AdminUserSummary } from "@/lib/admin-types";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 function PaymentsToolbar() {
   const router = useRouter();
@@ -32,8 +33,8 @@ function PaymentsToolbar() {
     const q = new URLSearchParams();
     const s = next.status !== undefined ? next.status : status;
     const u = next.userId !== undefined ? next.userId : userId;
-    if (s.trim()) q.set("status", s.trim());
-    if (u.trim()) q.set("userId", u.trim());
+    if (trimOrEmpty(s)) q.set("status", trimOrEmpty(s));
+    if (trimOrEmpty(u)) q.set("userId", trimOrEmpty(u));
     const str = q.toString();
     router.push(str ? `/admin/payments?${str}` : "/admin/payments");
   }
@@ -122,10 +123,12 @@ function AdminPaymentsContent() {
       setError(null);
 
       const parsedUserId =
-        userId.trim() && Number.isFinite(Number(userId)) ? Number(userId) : undefined;
+        trimOrEmpty(userId) && Number.isFinite(Number(userId))
+          ? Number(userId)
+          : undefined;
 
       const res = await getAdminPayments({
-        status: status.trim() || undefined,
+        status: trimOrEmpty(status) || undefined,
         userId: parsedUserId,
       });
 

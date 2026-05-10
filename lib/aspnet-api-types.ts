@@ -1,8 +1,4 @@
-export interface AuthUser {
-  id?: string | number;
-  name?: string;
-  email?: string;
-}
+import type { JsonValue } from "@/lib/json-types";
 
 export interface CsrfTokenResponse {
   csrfToken: string;
@@ -30,9 +26,12 @@ export interface PaymentCreateOrderRequestBody {
 }
 
 export interface PaymentVerifyResponse {
-  message?: string;
-  success?: boolean;
-  [key: string]: unknown;
+  paymentId: number;
+  status: "Pending" | "Success" | "Failed" | string;
+  amount: number;
+  courseId: number;
+  paidAt: string | null;
+  message: string;
 }
 
 export interface LoginRequestBody {
@@ -44,5 +43,5 @@ export interface ApiResult<T> {
   ok: boolean;
   status: number;
   data?: T;
-  error?: { message: string; details?: unknown };
+  error?: { message: string; details?: JsonValue };
 }

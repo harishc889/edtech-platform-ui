@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AdminAccessGate } from "@/app/components/admin/admin-access-gate";
 import { AdminPageHeader } from "@/app/components/admin/admin-page-header";
-import { getAdminDashboard } from "@/lib/admin-service";
-import type { AdminDashboardResponse } from "@/lib/admin-types";
+import {
+  getAdminAnalyticsEnrollments,
+  getAdminAnalyticsRevenue,
+  getAdminDashboard,
+} from "@/lib/admin-service";
+import type {
+  AdminDashboardResponse,
+  AdminEnrollmentAnalyticsResponse,
+  AdminRevenueAnalyticsResponse,
+} from "@/lib/admin-types";
+import { formatInrWhole } from "@/lib/display-format";
 
 const destinations = [
   {
@@ -36,15 +45,27 @@ const destinations = [
 
 export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState<AdminDashboardResponse | null>(null);
+  const [enrollmentAnalytics, setEnrollmentAnalytics] =
+    useState<AdminEnrollmentAnalyticsResponse | null>(null);
+  const [revenueAnalytics, setRevenueAnalytics] =
+    useState<AdminRevenueAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
-      const res = await getAdminDashboard();
+      const [dash, enrollRes, revenueRes] = await Promise.all([
+        getAdminDashboard(),
+        getAdminAnalyticsEnrollments(),
+        getAdminAnalyticsRevenue(6),
+      ]);
       if (cancelled) return;
-      if (res.ok) setMetrics(res.data);
+      if (dash.ok) setMetrics(dash.data);
+      if (enrollRes.ok) setEnrollmentAnalytics(enrollRes.data);
+      else setEnrollmentAnalytics(null);
+      if (revenueRes.ok) setRevenueAnalytics(revenueRes.data);
+      else setRevenueAnalytics(null);
       setLoading(false);
     };
     void load();
@@ -53,12 +74,23 @@ export default function AdminDashboardPage() {
     };
   }, []);
 
+  const enrollmentSum =
+    enrollmentAnalytics !== null
+      ? Object.values(enrollmentAnalytics).reduce((a, b) => a + b, 0)
+      : null;
+  const enrollmentBatchCount =
+    enrollmentAnalytics !== null ? Object.keys(enrollmentAnalytics).length : null;
+  const revenueSixMonthTotal =
+    revenueAnalytics !== null
+      ? Object.values(revenueAnalytics).reduce((a, b) => a + b, 0)
+      : null;
+
   return (
     <AdminAccessGate loginNextPath="/admin">
       <AdminPageHeader
         eyebrow="Overview"
         title="Operations dashboard"
-        description="Central entry for academy administration. Each card routes to a workspace mapped from your Admin API. Plug KPI widgets into GET /Admin/dashboard when the payload shape is finalized."
+        description="Central entry for academy administration. Snapshot below combines GET /Admin/dashboard with enrollment and revenue analytics (same sources as the Analytics workspace)."
       />
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -108,6 +140,55 @@ export default function AdminDashboardPage() {
           </div>
         ) : (
           <p className="mt-2 text-sm text-slate-600">Dashboard metrics unavailable.</p>
+        )}
+      </section>
+
+      <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h2 className="font-display text-lg font-bold text-slate-900">
+            Analytics preview
+          </h2>
+          <Link
+            href="/admin/analytics"
+            className="text-sm font-semibold text-cyan-700 hover:text-cyan-900"
+          >
+            Open analytics →
+          </Link>
+        </div>
+        <p className="mt-1 text-sm text-slate-600">
+          Totals from GET /Admin/analytics/enrollments and GET /Admin/analytics/revenue (last 6 months).
+        </p>
+        {loading ? (
+          <p className="mt-4 text-sm text-slate-600">Loading analytics…</p>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Enrollments (analytics API)
+              </p>
+              <p className="mt-1 text-xl font-bold text-slate-900">
+                {enrollmentSum !== null ? enrollmentSum : "—"}
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                {enrollmentBatchCount !== null
+                  ? `${enrollmentBatchCount} batch${enrollmentBatchCount === 1 ? "" : "es"} in breakdown`
+                  : "Unavailable"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Revenue (6 months)
+              </p>
+              <p className="mt-1 text-xl font-bold text-slate-900">
+                {revenueSixMonthTotal !== null
+                  ? formatInrWhole(revenueSixMonthTotal)
+                  : "—"}
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Matches dashboard Analytics revenue tab (default window).
+              </p>
+            </div>
+          </div>
         )}
       </section>
     </AdminAccessGate>

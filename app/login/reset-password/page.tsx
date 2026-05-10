@@ -8,10 +8,11 @@ import {
   PasswordFieldWithToggle,
   authPrimaryButtonClass,
 } from "@/app/components/password-field-with-toggle";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 function ResetPasswordContent() {
   const params = useSearchParams();
-  const token = params.get("token")?.trim() ?? "";
+  const token = trimOrEmpty(params.get("token"));
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

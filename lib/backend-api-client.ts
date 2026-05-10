@@ -1,6 +1,11 @@
 import axios, { type AxiosError } from "axios";
 import api from "@/lib/api";
 import { getErrorMessageFromPayload } from "@/lib/api-error";
+import type { JsonValue } from "@/lib/json-types";
+
+/** Allowed Axios GET query param scalars for our BFF. */
+export type QueryParamScalar = string | number | boolean | null | undefined;
+export type QueryParams = Record<string, QueryParamScalar>;
 
 /**
  * Browser → Next.js BFF (e.g. /api/backend/...) → ASP.NET `{API_PATH_PREFIX}/...`.
@@ -27,7 +32,7 @@ export async function backendRequest<T = unknown>(
   segments: string[],
   config?: {
     method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-    params?: Record<string, unknown>;
+    params?: QueryParams;
     data?: unknown;
     headers?: Record<string, string>;
   },
@@ -44,14 +49,14 @@ export async function backendRequest<T = unknown>(
 
 export type BackendResult<T> =
   | { ok: true; data: T }
-  | { ok: false; status: number; message: string; details?: unknown };
+  | { ok: false; status: number; message: string; details?: JsonValue };
 
 /** Like `backendRequest` but never throws; use in UI layers for list/detail calls. */
 export async function backendRequestSafe<T = unknown>(
   segments: string[],
   config?: {
     method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-    params?: Record<string, unknown>;
+    params?: QueryParams;
     data?: unknown;
     headers?: Record<string, string>;
   },
@@ -61,7 +66,7 @@ export async function backendRequestSafe<T = unknown>(
     return { ok: true, data };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const ax = error as AxiosError<Record<string, unknown>>;
+      const ax = error as AxiosError<unknown>;
       const payload = ax.response?.data ?? null;
       const status = ax.response?.status ?? 0;
       return {
@@ -71,7 +76,10 @@ export async function backendRequestSafe<T = unknown>(
           payload,
           ax.message || "Request failed.",
         ),
-        details: payload ?? undefined,
+        details:
+          payload !== undefined && payload !== null
+            ? (payload as JsonValue)
+            : undefined,
       };
     }
     return {

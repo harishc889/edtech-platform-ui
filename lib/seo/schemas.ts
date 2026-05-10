@@ -1,7 +1,9 @@
+import { trimOrEmpty } from "@/lib/string-trim";
+
 const SITE_NAME = "LA BIM Academy";
 
 function stripHtml(value: string): string {
-  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return trimOrEmpty(value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "));
 }
 
 export function faqSchema(items: Array<{ q: string; answerHtml: string }>) {
@@ -63,3 +65,9 @@ export function breadcrumbSchema(items: Array<{ name: string; item: string }>) {
     })),
   };
 }
+
+/** Values produced by this module — safe for `application/ld+json`. */
+export type JsonLdData =
+  | ReturnType<typeof faqSchema>
+  | ReturnType<typeof courseSchema>
+  | ReturnType<typeof breadcrumbSchema>;

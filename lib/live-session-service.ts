@@ -1,10 +1,11 @@
-import { asRecordList } from "@/lib/api-normalize";
 import { backendRequestSafe } from "@/lib/backend-api-client";
-import { liveSessionAdminFromRecord } from "@/lib/live-session-utils";
 import type {
   CreateLiveSessionInput,
+  LiveSessionBatchItem,
   LiveSessionAdminView,
+  LiveSessionMyItem,
 } from "@/lib/live-session-types";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 async function liveSessionGet<T>(
   segments: string[],
@@ -23,7 +24,7 @@ async function liveSessionWrite<T>(
   segments: string[],
   config: {
     method: "POST" | "DELETE";
-    data?: unknown;
+    data?: CreateLiveSessionInput;
   },
 ): Promise<ReturnType<typeof backendRequestSafe<T>>> {
   let res = await backendRequestSafe<T>(segments, {
@@ -31,7 +32,7 @@ async function liveSessionWrite<T>(
     data: config.data,
   });
   if (!res.ok && res.status === 404) {
-    const kebab = segments.map((s, idx) => {
+    const kebab = segments.map((s) => {
       if (s === "LiveSession") return "live-session";
       return s;
     });
@@ -47,10 +48,10 @@ export async function getLiveSessionsForBatch(
   batchId: number,
 ): Promise<{
   ok: boolean;
-  sessions: LiveSessionAdminView[];
+  sessions: LiveSessionBatchItem[];
   message: string;
 }> {
-  const res = await liveSessionGet<unknown>([
+  const res = await liveSessionGet<LiveSessionBatchItem[]>([
     "LiveSession",
     "batch",
     String(batchId),
@@ -58,8 +59,7 @@ export async function getLiveSessionsForBatch(
   if (!res.ok) {
     return { ok: false, sessions: [], message: res.message };
   }
-  const sessions = asRecordList(res.data).map(liveSessionAdminFromRecord);
-  return { ok: true, sessions, message: "" };
+  return { ok: true, sessions: res.data, message: "" };
 }
 
 export async function createLiveSession(
@@ -70,13 +70,13 @@ export async function createLiveSession(
   message: string;
   status: number;
 }> {
-  const res = await liveSessionWrite<Record<string, unknown>>(
+  const res = await liveSessionWrite<LiveSessionAdminView>(
     ["LiveSession"],
     {
       method: "POST",
       data: {
         batchId: input.batchId,
-        title: input.title.trim(),
+        title: trimOrEmpty(input.title),
         startTime: input.startTime,
         durationMinutes: input.durationMinutes,
         password: input.password ?? undefined,
@@ -87,20 +87,24 @@ export async function createLiveSession(
   if (!res.ok) {
     return { ok: false, message: res.message, status: res.status };
   }
-  if (!res.data || typeof res.data !== "object") {
-    return {
-      ok: true,
-      message: "Session scheduled.",
-      status: 201,
-    };
-  }
-  const session = liveSessionAdminFromRecord(res.data);
   return {
     ok: true,
-    session,
+    session: res.data,
     message: "Live session created.",
     status: 200,
   };
+}
+
+export async function getMyLiveSessions(): Promise<{
+  ok: boolean;
+  sessions: LiveSessionMyItem[];
+  message: string;
+}> {
+  const res = await liveSessionGet<LiveSessionMyItem[]>(["LiveSession", "my"]);
+  if (!res.ok) {
+    return { ok: false, sessions: [], message: res.message };
+  }
+  return { ok: true, sessions: res.data, message: "" };
 }
 
 export async function deleteLiveSession(sessionId: number): Promise<{
@@ -108,7 +112,7 @@ export async function deleteLiveSession(sessionId: number): Promise<{
   message: string;
   status: number;
 }> {
-  const res = await liveSessionWrite<unknown>(
+  const res = await liveSessionWrite<void>(
     ["LiveSession", String(sessionId)],
     { method: "DELETE" },
   );

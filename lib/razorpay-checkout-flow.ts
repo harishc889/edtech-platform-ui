@@ -5,6 +5,7 @@ import {
   resolvePaymentCsrfToken,
   verifyPayment,
 } from "@/lib/payment-api";
+import { trimOrEmpty } from "@/lib/string-trim";
 
 export const RAZORPAY_CHECKOUT_SCRIPT =
   "https://checkout.razorpay.com/v1/checkout.js";
@@ -65,7 +66,7 @@ function formatRazorpayFailureMessage(error: {
     error.source ? `Source: ${error.source}` : null,
     error.metadata?.order_id ? `Order: ${error.metadata.order_id}` : null,
     error.metadata?.payment_id ? `Payment: ${error.metadata.payment_id}` : null,
-  ].filter((part): part is string => !!part && part.trim().length > 0);
+  ].filter((part): part is string => !!part && trimOrEmpty(part).length > 0);
 
   if (parts.length > 0) return parts.join(" | ");
   return "Payment failed. Please try again.";

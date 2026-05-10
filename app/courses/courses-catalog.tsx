@@ -4,64 +4,18 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import CourseCard from "@/app/components/course-card";
-import { asRecordList } from "@/lib/api-normalize";
-import { mapCourseToProgram } from "@/lib/course-program-adapter";
+import type {
+  CourseBatchDto,
+  CourseByCodeDto,
+} from "@/lib/course-api-types";
 import { getCachedPrograms } from "@/lib/client-course-cache";
 import { getCourseById } from "@/lib/course-service";
 import { enrollInBatch } from "@/lib/enroll-service";
-import type { ProgramNextBatch } from "@/lib/program-catalog";
+import { formatBatchDateCompact } from "@/lib/display-format";
+import type { Program, ProgramNextBatch } from "@/lib/program-catalog";
+import { trimOrEmpty, trimOrUndefined } from "@/lib/string-trim";
 
-type NextBatchPreview = {
-  id: number;
-  startDate: string;
-  capacity: number;
-};
-
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
-function formatBatchDate(value: string) {
-  if (!value) return "TBA";
-  const dt = new Date(value);
-  if (Number.isNaN(dt.getTime())) return "TBA";
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(dt);
-}
-
-function pickNearestBatch(rows: Record<string, unknown>[]): NextBatchPreview | null {
-  if (rows.length === 0) return null;
-  const now = Date.now();
-  const parsed = rows
-    .map((row, idx) => {
-      const id = toNumber(row.id ?? row.batchId, idx + 1);
-      const startDateRaw =
-        typeof row.startDate === "string" ? row.startDate : String(row.startDate ?? "");
-      const timestamp = startDateRaw ? new Date(startDateRaw).getTime() : Number.NaN;
-      const capacity = toNumber(row.capacity, 0);
-      return { id, startDate: startDateRaw, timestamp, capacity };
-    })
-    .filter((item) => Number.isFinite(item.id));
-  if (parsed.length === 0) return null;
-  const upcoming = parsed
-    .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= now)
-    .sort((a, b) => a.timestamp - b.timestamp);
-  const fallback = parsed
-    .filter((item) => Number.isFinite(item.timestamp))
-    .sort((a, b) => a.timestamp - b.timestamp);
-  const best = upcoming[0] ?? fallback[0] ?? parsed[0];
-  return { id: best.id, startDate: best.startDate, capacity: best.capacity };
-}
-
-function mapCourseCard(program: ReturnType<typeof mapCourseToProgram>, index: number) {
+function mapCourseCard(program: Program, index: number) {
   const id = String(program.id ?? index);
   return {
     id,
@@ -88,11 +42,10 @@ export default function CoursesCatalog() {
 
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [detailRecord, setDetailRecord] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
-  const [batches, setBatches] = useState<Record<string, unknown>[]>([]);
+  const [detailCourse, setDetailCourse] = useState<CourseByCodeDto | null>(
+    null,
+  );
+  const [batches, setBatches] = useState<CourseBatchDto[]>([]);
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
@@ -125,10 +78,10 @@ export default function CoursesCatalog() {
     };
   }, []);
 
-  const loadDetail = useCallback(async (courseCode: string, apiCourseId?: number) => {
+  const loadDetail = useCallback(async (courseCode: string) => {
     setDetailLoading(true);
     setDetailError(null);
-    setDetailRecord(null);
+    setDetailCourse(null);
     setBatches([]);
     setEnrollMessage(null);
 
@@ -141,26 +94,13 @@ export default function CoursesCatalog() {
     }
 
     const body = courseRes.data;
-    setDetailRecord(
-      body && typeof body === "object"
-        ? (body as Record<string, unknown>)
-        : null,
-    );
-
-    const bodyRecord =
-      body && typeof body === "object" ? (body as Record<string, unknown>) : null;
-    const program = bodyRecord ? mapCourseToProgram(bodyRecord) : null;
-    const mappedBatches = Array.isArray(program?.batches)
-      ? program.batches.map((batch) => ({
-          id: batch.id,
-          courseId: batch.courseId,
-          startDate: batch.startDate,
-          endDate: batch.endDate,
-          mentorName: batch.mentorName ?? "",
-          capacity: batch.capacity,
-        }))
-      : [];
-    setBatches(mappedBatches);
+    if (!body) {
+      setDetailError("Course details are unavailable.");
+      setDetailLoading(false);
+      return;
+    }
+    setDetailCourse(body);
+    setBatches(body.batches ?? []);
 
     setDetailLoading(false);
   }, []);
@@ -168,7 +108,7 @@ export default function CoursesCatalog() {
   useEffect(() => {
     if (!selectedId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDetailRecord(null);
+      setDetailCourse(null);
       setBatches([]);
       setDetailError(null);
       setEnrollMessage(null);
@@ -181,13 +121,7 @@ export default function CoursesCatalog() {
       null;
     const courseCode = selectedCourse?.courseCode ?? selectedId;
     if (!selectedCourse && /^\d+$/.test(courseCode)) return;
-    const apiCourseId =
-      selectedCourse?.apiCourseId ??
-      (() => {
-        const n = Number(selectedId);
-        return Number.isFinite(n) ? n : undefined;
-      })();
-    void loadDetail(courseCode, apiCourseId);
+    void loadDetail(courseCode);
   }, [selectedId, loadDetail, courses]);
 
   async function handleEnroll(batchId: number) {
@@ -244,7 +178,7 @@ export default function CoursesCatalog() {
                   eligibility={course.eligibility}
                   nextBatchLabel={
                     nextBatch
-                      ? `${formatBatchDate(nextBatch.startDate)} · ${nextBatch.capacity > 0 ? `${nextBatch.capacity} seats` : "Seats TBA"}`
+                      ? `${formatBatchDateCompact(nextBatch.startDate)} · ${nextBatch.capacity > 0 ? `${nextBatch.capacity} seats` : "Seats TBA"}`
                       : "Announcing soon"
                   }
                   cardCoverImage={course.cardCoverImage}
@@ -273,15 +207,13 @@ export default function CoursesCatalog() {
                 {detailError}
               </p>
             ) : null}
-            {detailRecord && !detailLoading ? (
+            {detailCourse && !detailLoading ? (
               <div className="mt-6 text-sm leading-relaxed text-slate-600">
                 <p className="font-display text-lg font-bold text-slate-900">
-                  {String(
-                    detailRecord.title ?? detailRecord.name ?? "Course",
-                  )}
+                  {trimOrEmpty(detailCourse.title) || "Course"}
                 </p>
-                {typeof detailRecord.description === "string" ? (
-                  <p className="mt-3">{detailRecord.description}</p>
+                {trimOrUndefined(detailCourse.description) ? (
+                  <p className="mt-3">{trimOrEmpty(detailCourse.description)}</p>
                 ) : null}
               </div>
             ) : null}
@@ -292,23 +224,12 @@ export default function CoursesCatalog() {
                   Batches — enroll
                 </h3>
                 <ul className="mt-4 space-y-3">
-                  {batches.map((b, i) => {
-                    const bid = b.id ?? b.batchId;
-                    const batchNum =
-                      typeof bid === "number"
-                        ? bid
-                        : typeof bid === "string"
-                          ? Number(bid)
-                          : NaN;
-                    const label =
-                      typeof b.name === "string"
-                        ? b.name
-                        : typeof b.title === "string"
-                          ? b.title
-                          : `Batch ${String(bid ?? i)}`;
+                  {batches.map((b) => {
+                    const batchNum = b.id;
+                    const label = `Batch ${b.id} · ${formatBatchDateCompact(b.startDate)} · ${trimOrEmpty(b.mentorName) || "Faculty"}`;
                     return (
                       <li
-                        key={String(bid ?? i)}
+                        key={b.id}
                         className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3"
                       >
                         <span className="text-sm font-medium text-slate-800">
@@ -321,9 +242,7 @@ export default function CoursesCatalog() {
                             enrollingId === String(batchNum)
                           }
                           onClick={() => {
-                            if (Number.isFinite(batchNum)) {
-                              void handleEnroll(batchNum);
-                            }
+                            void handleEnroll(batchNum);
                           }}
                           className="rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 px-5 py-2 text-xs font-bold text-white shadow-md transition hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                         >

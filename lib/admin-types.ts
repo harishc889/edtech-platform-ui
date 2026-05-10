@@ -18,7 +18,10 @@ export type AdminUserRolePatchRequest = {
 
 export type AdminUserRolePatchResponse = {
   id: number;
+  name: string;
+  email: string;
   role: AdminRole;
+  message: string;
 };
 
 export type AdminDashboardResponse = {
@@ -56,12 +59,7 @@ export type AdminPaymentsQuery = {
   userId?: number;
 };
 
-export type AdminEnrollmentAnalyticsPoint = {
-  label: string;
-  value: number;
-};
-
-export type AdminRevenueAnalyticsPoint = {
-  month: string;
-  revenue: number;
-};
+/** GET /api/Admin/analytics/enrollments -> { "batchId": count } */
+export type AdminEnrollmentAnalyticsResponse = Record<string, number>;
+/** GET /api/Admin/analytics/revenue -> { "YYYY-MM": totalRevenue } */
+export type AdminRevenueAnalyticsResponse = Record<string, number>;
