@@ -66,7 +66,7 @@ export default function SiteFooter() {
             </p>
             <ul className="mt-4 space-y-2 text-sm text-slate-400">
               <li>Vasant Kunj , India</li>
-              <li>+91-7017578290</li>
+              <li>+91-7895001831</li>
               <li>la@labimsolutions.com</li>
             </ul>
           </div>

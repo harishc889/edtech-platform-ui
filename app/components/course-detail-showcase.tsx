@@ -5,6 +5,10 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { toModuleDescriptionHtml } from "@/lib/module-description-html";
 import type { Program } from "@/lib/program-catalog";
+import {
+  isExternalWhatsAppHref,
+  resolveWhatsAppBusinessHref,
+} from "@/lib/whatsapp-business-link";
 
 type Props = {
   course: Program;
@@ -32,8 +36,8 @@ export default function CourseDetailShowcase({
   onSelectBatch,
 }: Props) {
   const [expandedModule, setExpandedModule] = useState<number>(0);
-  const whatsappBusinessLink =
-    process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_LINK?.trim() || "/contact";
+  const whatsappHref = resolveWhatsAppBusinessHref();
+  const whatsappExternal = isExternalWhatsAppHref(whatsappHref);
   const toolItems = useMemo(() => {
     if (course.tools && course.tools.length > 0) return course.tools;
     return Array.from({ length: 14 }).map((_, idx) => ({
@@ -599,23 +603,19 @@ export default function CourseDetailShowcase({
                   <p className="mt-1">
                     For EMI plan activation, call{" "}
                     <a
-                      href="tel:+917017578290"
+                      href="tel:+917895001831"
                       className="font-bold text-sky-800 underline underline-offset-2"
                     >
-                      +91-7017578290
+                      +91-7895001831
                     </a>
                     .
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Link
-                      href={whatsappBusinessLink}
+                      href={whatsappHref}
                       className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-sky-800 transition hover:bg-sky-50 sm:text-xs"
-                      target={whatsappBusinessLink.startsWith("http") ? "_blank" : undefined}
-                      rel={
-                        whatsappBusinessLink.startsWith("http")
-                          ? "noopener noreferrer"
-                          : undefined
-                      }
+                      target={whatsappExternal ? "_blank" : undefined}
+                      rel={whatsappExternal ? "noopener noreferrer" : undefined}
                     >
                       <svg
                         viewBox="0 0 24 24"
