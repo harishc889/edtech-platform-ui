@@ -47,10 +47,9 @@ export type PublishedCourseDto = {
   subtitle: string | null;
   description: string | null;
   duration: string;
-  /** API may send `230` or `"230 Hours"`. */
-  hours: number | string;
+  hours: string;
   internshipDuration: string | null;
-  internshipHours: number | null;
+  internshipHours: string;
   language: string;
   mode: string;
   assessments: string;

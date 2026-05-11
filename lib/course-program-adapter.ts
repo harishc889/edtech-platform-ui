@@ -2,7 +2,6 @@ import type {
   CourseByCodeDto,
   CourseBatchDto,
   CourseModuleDto,
-  PublishedCourseDto,
 } from "@/lib/course-api-types";
 import type { CourseModule, ProgramBatch, Program } from "@/lib/program-catalog";
 import { trimOrEmpty } from "@/lib/string-trim";
@@ -21,14 +20,6 @@ function normalizeListField(
   return parts.length > 0 ? parts : value.trim() ? [value.trim()] : [];
 }
 
-function parseHourScalar(h: number | string): number {
-  if (typeof h === "number" && Number.isFinite(h)) return h;
-  if (typeof h === "string") {
-    const m = h.trim().match(/^(\d+(?:\.\d+)?)/);
-    if (m) return Number(m[1]);
-  }
-  return 0;
-}
 
 /** Module hours: number, or strings like "10 Hours" from the API. */
 function normalizeModuleHours(h: CourseModuleDto["hours"]): string {
@@ -40,15 +31,6 @@ function normalizeModuleHours(h: CourseModuleDto["hours"]): string {
   return /\bhour/i.test(s) ? s : `${s} Hours`;
 }
 
-/** Course-level hours: number or strings like "230 Hours". */
-function normalizeCourseHoursDisplay(h: PublishedCourseDto["hours"]): string {
-  if (typeof h === "number" && Number.isFinite(h) && h > 0) {
-    return `${h} Hours`;
-  }
-  const s = typeof h === "string" ? h.trim() : "";
-  if (!s) return "—";
-  return /\bhour/i.test(s) ? s : `${s} Hours`;
-}
 
 function stringifyCriterion(value: number | string | null | undefined): string {
   if (value == null) return "—";
@@ -89,16 +71,7 @@ export function mapCourseByCodeDtoToProgram(
     fallbackSlug.trim() ||
     String(apiCourseId || "course");
   const id = idSource.replace(/\s+/g, "-");
-
-  const moduleHoursTotal = dto.modules.reduce(
-    (sum, m) => sum + parseHourScalar(m.hours),
-    0,
-  );
-  const hours =
-    moduleHoursTotal > 0
-      ? `${moduleHoursTotal} Hours`
-      : normalizeCourseHoursDisplay(dto.hours);
-
+  
   const batches =
     dto.batches.length > 0
       ? dto.batches.map((b) => programBatchFromDto(b, apiCourseId))
@@ -113,14 +86,9 @@ export function mapCourseByCodeDtoToProgram(
       trimOrEmpty(dto.subtitle) ||
       `${trimOrEmpty(dto.title) || "Course"} program`,
     duration: trimOrEmpty(dto.duration) || "Flexible",
-    hours,
+    hours: trimOrEmpty(dto.hours) || "—",
     internshipDuration: trimOrEmpty(dto.internshipDuration) || "—",
-    internshipHours:
-      dto.internshipHours != null &&
-      Number.isFinite(Number(dto.internshipHours)) &&
-      Number(dto.internshipHours) > 0
-        ? String(dto.internshipHours)
-        : "—",
+    internshipHours: trimOrEmpty(dto.internshipHours) || "—"  ,
     language: trimOrEmpty(dto.language) || "English",
     mode: trimOrEmpty(dto.mode) || "Online",
     assessments: trimOrEmpty(dto.assessments) || "—",
