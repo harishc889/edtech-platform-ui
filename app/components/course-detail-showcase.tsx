@@ -78,7 +78,7 @@ export default function CourseDetailShowcase({
   const stats = [
     { title: "Course Duration", value: `${course.duration} (${course.hours})` },
     {
-      title: "Internship Duration",
+      title: "Internship Duration (Paid)",
       value: `${course.internshipDuration} (${course.internshipHours})`,
     },
     { title: "Modules", value: `${course.modules.length}` },
@@ -588,6 +588,7 @@ export default function CourseDetailShowcase({
                   Information on various payment methods is available for your convenience
                   and seamless registration.
                 </p>
+                <h4 className="text-base font-bold sm:text-lg">Low Cost EMI</h4>
                 <div className="mt-3 rounded-lg border border-cyan-200/45 bg-cyan-50 px-3 py-2 text-left text-[11px] leading-snug text-slate-900 sm:text-xs">
                   <p className="font-bold">EMI payment assistance is available via support team only.</p>
                   <p className="mt-1">
