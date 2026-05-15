@@ -589,7 +589,7 @@ export default function CourseDetailShowcase({
                   and seamless registration.
                 </p>
                 <h4 className="text-base font-bold sm:text-lg">Low Cost EMI</h4>
-                <div className="mt-3 rounded-lg border border-cyan-200/45 bg-cyan-50 px-3 py-2 text-left text-[11px] leading-snug text-slate-900 sm:text-xs">
+                <div className="hidden mt-3 rounded-lg border border-cyan-200/45 bg-cyan-50 px-3 py-2 text-left text-[11px] leading-snug text-slate-900 sm:text-xs">
                   <p className="font-bold">EMI payment assistance is available via support team only.</p>
                   <p className="mt-1">
                     For EMI plan activation, call{" "}
