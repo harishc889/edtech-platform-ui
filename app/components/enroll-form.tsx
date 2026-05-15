@@ -835,7 +835,7 @@ export function EnrollForm({ initialCourseId, initialBatchId }: Props) {
             <div className="mt-3 flex flex-wrap gap-2">
               {[
                 { id: "upfront", label: "Upfront Payment" },
-                { id: "book-slot", label: "Book Slot" },
+                // { id: "book-slot", label: "Book Slot" },
                 // { id: "emi", label: "EMI Options" },
               ].map((mode) => (
                 <label
